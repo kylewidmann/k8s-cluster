@@ -1,0 +1,25 @@
+# inventory.yml
+---
+all:
+  children:
+    control_plane:
+      hosts:
+        control01:
+          ansible_host: 192.168.1.101
+        control02:
+          ansible_host: 192.168.1.102
+        control03:
+          ansible_host: 192.168.1.103
+    workers:
+      hosts:
+        worker01:
+          ansible_host: 192.168.1.201
+        worker02:
+          ansible_host: 192.168.1.202
+  vars:
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: ~/.ssh/ec2
+    ansible_become: yes
+    cluster_name: microk8s-cluster
+    microk8s_channel: 1.30/stable
+    control_plane_ip: 192.168.1.100  # Virtual IP for HA

@@ -5,20 +5,22 @@ all:
     control_plane:
       hosts:
         control01:
-          ansible_host: 192.168.1.101
+          ansible_host: 34.202.230.16
         control02:
-          ansible_host: 192.168.1.102
+          ansible_host: 98.84.178.220
         control03:
-          ansible_host: 192.168.1.103
+          ansible_host: 107.23.130.38
     workers:
       hosts:
         worker01:
-          ansible_host: 192.168.1.201
+          ansible_host: 18.215.163.127
         worker02:
-          ansible_host: 192.168.1.202
+          ansible_host: 54.87.54.94
+        worker03:
+          ansible_host: 3.80.24.99
   vars:
     ansible_user: ubuntu
-    ansible_ssh_private_key_file: ~/.ssh/ec2
+    ansible_ssh_private_key_file: ~/.ssh/ec2.pem
     ansible_become: yes
     cluster_name: microk8s-cluster
     microk8s_channel: 1.30/stable

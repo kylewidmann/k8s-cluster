@@ -1,0 +1,14 @@
+[Interface]
+PrivateKey = {{ wg_private }}
+Address = {{ wireguard_ip }}/24
+ListenPort = 51820
+
+{% for host in groups['all'] %}
+{% if host != inventory_hostname and hostvars[host].wg_public is defined %}
+[Peer]
+PublicKey = {{ hostvars[host].wg_public }}
+AllowedIPs = {{ '10.10.10.' ~ (groups['all'].index(host) + 1) | string }}/32
+Endpoint = {{ hostvars[host].ansible_host }}:51820
+PersistentKeepalive = 25
+{% endif %}
+{% endfor %}

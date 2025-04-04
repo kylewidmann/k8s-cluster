@@ -1,27 +1,32 @@
-# inventory.yml
 ---
+# inventory.yml
 all:
   children:
     control_plane:
       hosts:
-        control01:
-          ansible_host: 34.202.230.16
-        control02:
-          ansible_host: 98.84.178.220
-        control03:
-          ansible_host: 107.23.130.38
+        control0:
+          ansible_host: 50.19.43.135
+        control1:
+          ansible_host: 34.207.78.228
+        control2:
+          ansible_host: 54.82.92.191
     workers:
       hosts:
-        worker01:
-          ansible_host: 18.215.163.127
-        worker02:
-          ansible_host: 54.87.54.94
-        worker03:
-          ansible_host: 3.80.24.99
+        worker0:
+            ansible_host: 54.175.115.204
+        worker1:
+            ansible_host: 3.89.141.89
+        worker2:
+            ansible_host: 54.158.47.5
+
   vars:
     ansible_user: ubuntu
     ansible_ssh_private_key_file: ~/.ssh/ec2.pem
     ansible_become: yes
     cluster_name: microk8s-cluster
-    microk8s_channel: 1.30/stable
-    control_plane_ip: 192.168.1.100  # Virtual IP for HA
+    microk8s_channel: 1.31/stable
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    # Use public DNS instead of virtual IP for cross-network setup
+    api_endpoint: microk8s.example.com
+    # Flag to indicate cross-network setup
+    cross_network: true

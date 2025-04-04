@@ -1,9 +1,64 @@
 # site.yml
 ---
+# - name: Network connectivity verification
+#   hosts: all
+#   become: yes
+#   any_errors_fatal: true
+#   tasks:
+
+#     - name: Create temporary test file
+#       file:
+#         path: /tmp/connectivity-test
+#         state: touch
+#         mode: '0644'
+#       changed_when: false
+
+#     - name: Get public/external IP address
+#       shell: "curl -s https://ifconfig.me || wget -qO- https://ifconfig.me"
+#       register: public_ip
+#       changed_when: false
+#       ignore_errors: yes
+
+#     - name: Set detected public IP
+#       set_fact:
+#         detected_public_ip: "{{ public_ip.stdout }}"
+#       when: public_ip.rc == 0
+
+#     - name: Verify detected IP matches inventory IP
+#       debug:
+#         msg: "Warning: Detected public IP ({{ detected_public_ip }}) doesn't match inventory ansible_host ({{ ansible_host }}). This might cause connectivity issues."
+#       when:
+#         - public_ip.rc == 0
+#         - detected_public_ip != ansible_host
+#         - cross_network | bool
+
+#     - name: Configure firewall for MicroK8s
+#       ufw:
+#         rule: allow
+#         port: "{{ item }}"
+#         proto: tcp
+#       loop: "{{ firewall_ports }}"
+#       when: cross_network | bool
+
+#     - name: Enable UFW
+#       ufw:
+#         state: enabled
+#         policy: deny
+#       when: cross_network | bool
+
 - name: Common setup for all nodes
   hosts: all
   become: yes
   tasks:
+
+    - name: Set Wireguard IPs
+      set_fact:
+        wireguard_ip: "10.10.10.{{ (groups['all'].index(inventory_hostname) + 1) }}"
+
+    - name: Show WG IPs
+      debug:
+        msg: "{{ wireguard_ip }}"
+
     - name: Update apt cache
       apt:
         update_cache: yes
@@ -18,6 +73,7 @@
           - gnupg
           - lsb-release
           - snapd
+          - dnsutils
         state: present
 
     - name: Ensure snap is up to date
@@ -36,6 +92,12 @@
         line: "{{ hostvars[item].ansible_host }} {{ item }}"
         state: present
       loop: "{{ groups['all'] }}"
+
+    # Reinstall microk8s for debug
+    - name: Remove MicroK8s
+      snap:
+        name: microk8s
+        state: absent
 
     - name: Install MicroK8s
       snap:
@@ -58,6 +120,28 @@
         group: "{{ ansible_user }}"
         mode: '0755'
 
+    - name: Configure MicroK8s to use wireguard IPs
+      lineinfile:
+        path: /var/snap/microk8s/current/args/kube-apiserver
+        regexp: "^--advertise-address="
+        line: "--advertise-address={{ wireguard_ip }}"
+        state: present
+      register: config_updated
+      when: cross_network | bool
+
+    - name: Configure kubelet to use wireguard IPs
+      lineinfile:
+        path: /var/snap/microk8s/current/args/kubelet
+        regexp: "^--node-ip="
+        line: "--node-ip={{ wireguard_ip }}"
+        state: present
+      register: kubelet_updated
+      when: cross_network | bool
+
+    - name: Restart MicroK8s if configuration was updated
+      command: snap restart microk8s
+      when: (config_updated is changed or kubelet_updated is changed) and cross_network | bool
+
     - name: Wait for MicroK8s to be ready
       command: microk8s status --wait-ready
       changed_when: false
@@ -66,37 +150,122 @@
       delay: 10
       until: microk8s_status.rc == 0
 
+# - name: Setup WireGuard VPN for cross-network communication
+#   hosts: all
+#   become: yes
+#   tasks:
+#     - name: Generate WireGuard private key
+#       shell: wg genkey
+#       register: wg_private_key
+#       changed_when: false
+#       when: cross_network | bool
+
+#     - name: Store WireGuard private key
+#       set_fact:
+#         wg_private: "{{ wg_private_key.stdout }}"
+#       when: cross_network | bool
+
+#     - name: Generate WireGuard public key
+#       shell: echo "{{ wg_private }}" | wg pubkey
+#       register: wg_public_key
+#       changed_when: false
+#       when: cross_network | bool
+
+#     - name: Store WireGuard public key
+#       set_fact:
+#         wg_public: "{{ wg_public_key.stdout }}"
+#       when: cross_network | bool
+
+#     - name: Share public keys with other hosts
+#       set_fact:
+#         public_keys: "{{ public_keys | default({}) | combine({inventory_hostname: wg_public}) }}"
+#       when: cross_network | bool
+#       delegate_to: localhost
+#       delegate_facts: true
+
+#     - name: Create WireGuard configuration directory
+#       file:
+#         path: /etc/wireguard
+#         state: directory
+#         mode: '0700'
+#       when: cross_network | bool
+
+#     - name: Create WireGuard confiwireguard_mtuguration
+#       template:
+#         src: wg0.conf.j2
+#         dest: /etc/wireguard/wg0.conf
+#         owner: root
+#         group: root
+#         mode: '0600'
+#       when: cross_network | bool
+#       vars:
+#         node_index: "{{ groups['all'].index(inventory_hostname) }}"
+#         wireguard_cidr: "10.10.10.0/24"
+#         wireguard_ip: "10.10.10.{{ node_index + 1 }}"
+
+#     - name: Start WireGuard
+#       systemd:
+#         name: wg-quick@wg0
+#         enabled: yes
+#         state: started
+#       when: cross_network | bool
+
+#     - name: Wait for WireGuard interface to be up
+#       wait_for:
+#         path: /sys/class/net/wg0/operstate
+#       when: cross_network | bool
+
 - name: Setup control plane nodes
   hosts: control_plane
   become: yes
   tasks:
+
     - name: Get first control node
       set_fact:
         first_control_node: "{{ groups['control_plane'][0] }}"
 
     - name: Initialize cluster on first control node
       block:
+
+        - name: Configure DNS for cross-network setup
+          command: microk8s enable dns:{{ ansible_host }},{{ wireguard_ip | default(ansible_host) }}
+          args:
+            creates: /var/snap/microk8s/current/addons/dns/enabled
+          when:
+            - inventory_hostname == first_control_node
+            - cross_network | bool
+          register: dns_result
+          retries: 3
+          delay: 10
+          until: dns_result.rc == 0
+
         - name: Enable required MicroK8s addons on first control node
-          command: microk8s enable dns storage ingress metallb:{{ control_plane_ip }}-{{ control_plane_ip }}
+          command: "microk8s enable {{ item }}"
           args:
             creates: /var/snap/microk8s/current/addons/dns/enabled
           when: inventory_hostname == first_control_node
+          loop: "{{ microk8s_addons }}"
           register: addon_result
           retries: 3
           delay: 10
           until: addon_result.rc == 0
 
         - name: Get join token from first control node
-          command: microk8s add-node --token-ttl 3600
+          command: microk8s add-node --token-ttl 86400
           register: join_command
-          when: inventory_hostname == first_control_node
+          when: 
+            - inventory_hostname == first_control_node
+            - cross_network | bool
           changed_when: false
 
         - name: Set join command fact
           set_fact:
-            join_command: "{{ join_command.stdout_lines[1] }}"
+            join_command: "{{ join_command.stdout_lines[-1] if cross_network | bool else join_command_standard.stdout_lines[1] }}"
           when: inventory_hostname == first_control_node
 
+        - name: Show join command
+          debug:
+            msg: "{{ join_command }}"
       when: inventory_hostname == first_control_node
 
     - name: Share join command with other hosts
@@ -106,15 +275,15 @@
 
     - name: Join other control plane nodes to the cluster
       command: "{{ join_command }}"
-      when: 
+      when:
         - inventory_hostname != first_control_node
         - join_command is defined
       register: join_result
       retries: 3
       delay: 10
-      until: 
+      until:
         - join_result.rc == 0 or "'already known to dqlite' in join_result.stdout"
-      failed_when: 
+      failed_when:
         - join_result.rc != 0
         - "'already known to dqlite' not in join_result.stdout"
       changed_when: join_result.rc == 0
@@ -155,10 +324,18 @@
         mode: '0600'
       when: kube_config is defined
 
+    # - name: Update cluster endpoint if using DNS
+    #   command: microk8s kubectl config set-cluster microk8s-cluster --server=https://{{ api_endpoint }}:16443
+    #   when: 
+    #     - cross_network | bool
+    #     - api_endpoint is defined
+    #   changed_when: false
+
 - name: Setup worker nodes
   hosts: workers
   become: yes
   tasks:
+
     - name: Get join command from first control node
       set_fact:
         join_command: "{{ hostvars[groups['control_plane'][0]]['join_command'] }}"
@@ -170,9 +347,9 @@
       register: join_result
       retries: 3
       delay: 10
-      until: 
+      until:
         - join_result.rc == 0 or "'already known to dqlite' in join_result.stdout"
-      failed_when: 
+      failed_when:
         - join_result.rc != 0
         - "'already known to dqlite' not in join_result.stdout"
       changed_when: join_result.rc == 0
@@ -181,6 +358,7 @@
   hosts: "{{ groups['control_plane'][0] }}"
   become: yes
   tasks:
+
     - name: Wait for all nodes to be ready
       command: microk8s kubectl get nodes
       register: nodes_status
@@ -197,3 +375,14 @@
     - name: Show nodes information
       debug:
         var: nodes_info.stdout_lines
+
+    - name: Check cross-network connectivity between nodes
+      command: microk8s kubectl get pods -n kube-system
+      register: pods_info
+      when: cross_network | bool
+      changed_when: false
+
+    - name: Show pods information
+      debug:
+        var: pods_info.stdout_lines
+      when: cross_network | bool

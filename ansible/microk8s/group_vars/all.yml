@@ -1,28 +1,42 @@
 # group_vars/all.yml
----
 # Cluster configuration
 cluster_name: microk8s-cluster
-microk8s_channel: 1.30/stable
-
+microk8s_channel: 1.31/stable
 # Network configuration
-control_plane_ip: 192.168.1.100  # Virtual IP for HA control plane
+# Network configuration - cross-network setup
+cross_network: true # Enable cross-network settings
+api_endpoint: cluster.example.com # Public DNS for the cluster API
+dns_servers: "8.8.8.8,8.8.4.4" # Public DNS servers
+wireguard_cidr: "10.10.10.0/24" # Internal WireGuard network
+# Pod and service networks
 pod_network_cidr: 10.244.0.0/16
 service_cidr: 10.96.0.0/12
-
 # MicroK8s addons to enable
 microk8s_addons:
   - dns
   - storage
   - ingress
-  - metallb:192.168.1.100-192.168.1.110
   - dashboard
   - metrics-server
-
+  - prometheus
 # SSH configuration
 ansible_user: ubuntu
 ansible_ssh_private_key_file: ~/.ssh/ec2.pem
 ansible_become: yes
-
 # System requirements
 system_memory_minimum_mb: 4096
 system_cpu_minimum: 2
+# Firewall ports to open for cross-network communication
+firewall_ports:
+  - 22    # SSH Access
+  - 51820 # WireGuard VPN
+  - 16443 # Kubernetes API server
+  - 25000 # MicroK8s cluster agent
+  - 19001 # dqlite
+  - 10250 # Kubelet
+  - 10255 # Kubelet read-only
+  - 10257 # kube-controller-manager
+  - 10259 # kube-scheduler
+  - 12379 # etcd
+  - 51820 # WG
+  - '30000:32767' # NodePort services

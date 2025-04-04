@@ -1,0 +1,18 @@
+all:
+  children:
+    control_plane:
+      hosts:
+        control0:
+          ansible_host: 50.19.43.135
+        control1:
+          ansible_host: 34.207.78.228
+        control2:
+          ansible_host: 54.82.92.191
+    workers:
+      hosts:
+        worker0:
+            ansible_host: 54.175.115.204
+        worker1:
+            ansible_host: 3.89.141.89
+        worker2:
+            ansible_host: 54.158.47.5

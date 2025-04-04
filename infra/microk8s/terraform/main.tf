@@ -70,22 +70,14 @@ resource "aws_security_group" "instance" {
   description = "Allow SSH and required ports for Ansible testing"
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "SSH access"
-  }
-
-  # Add additional ingress rules for your Ansible testing needs
-  # Example for HTTP
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP access"
+  dynamic "ingress" {
+    for_each = [22, 80, 16443, 10250, 10255, 25000, 12379, 10257, 10259, 19001, 4789, 51820]
+    content {
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   egress {
@@ -122,6 +114,16 @@ module "ec2_instance" {
       Name = "${var.prefix}-${each.key}"
     }
   )
+}
+
+# Ansible inventory file generation
+resource "local_file" "ansible_inventory" {
+  content = templatefile("${path.module}/templates/inventory.tmpl", {
+    instances    = module.ec2_instance
+  })
+  filename = "${path.module}/inventory.yml"
+
+  depends_on = [module.ec2_instance]
 }
 
 # Output instance details

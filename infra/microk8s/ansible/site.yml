@@ -1,51 +1,5 @@
 # site.yml
 ---
-# - name: Network connectivity verification
-#   hosts: all
-#   become: yes
-#   any_errors_fatal: true
-#   tasks:
-
-#     - name: Create temporary test file
-#       file:
-#         path: /tmp/connectivity-test
-#         state: touch
-#         mode: '0644'
-#       changed_when: false
-
-#     - name: Get public/external IP address
-#       shell: "curl -s https://ifconfig.me || wget -qO- https://ifconfig.me"
-#       register: public_ip
-#       changed_when: false
-#       ignore_errors: yes
-
-#     - name: Set detected public IP
-#       set_fact:
-#         detected_public_ip: "{{ public_ip.stdout }}"
-#       when: public_ip.rc == 0
-
-#     - name: Verify detected IP matches inventory IP
-#       debug:
-#         msg: "Warning: Detected public IP ({{ detected_public_ip }}) doesn't match inventory ansible_host ({{ ansible_host }}). This might cause connectivity issues."
-#       when:
-#         - public_ip.rc == 0
-#         - detected_public_ip != ansible_host
-#         - cross_network | bool
-
-#     - name: Configure firewall for MicroK8s
-#       ufw:
-#         rule: allow
-#         port: "{{ item }}"
-#         proto: tcp
-#       loop: "{{ firewall_ports }}"
-#       when: cross_network | bool
-
-#     - name: Enable UFW
-#       ufw:
-#         state: enabled
-#         policy: deny
-#       when: cross_network | bool
-
 - name: Common setup for all nodes
   hosts: all
   become: yes
@@ -92,12 +46,6 @@
         line: "{{ hostvars[item].ansible_host }} {{ item }}"
         state: present
       loop: "{{ groups['all'] }}"
-
-    # Reinstall microk8s for debug
-    - name: Remove MicroK8s
-      snap:
-        name: microk8s
-        state: absent
 
     - name: Install MicroK8s
       snap:
@@ -149,72 +97,7 @@
       retries: 10
       delay: 10
       until: microk8s_status.rc == 0
-
-# - name: Setup WireGuard VPN for cross-network communication
-#   hosts: all
-#   become: yes
-#   tasks:
-#     - name: Generate WireGuard private key
-#       shell: wg genkey
-#       register: wg_private_key
-#       changed_when: false
-#       when: cross_network | bool
-
-#     - name: Store WireGuard private key
-#       set_fact:
-#         wg_private: "{{ wg_private_key.stdout }}"
-#       when: cross_network | bool
-
-#     - name: Generate WireGuard public key
-#       shell: echo "{{ wg_private }}" | wg pubkey
-#       register: wg_public_key
-#       changed_when: false
-#       when: cross_network | bool
-
-#     - name: Store WireGuard public key
-#       set_fact:
-#         wg_public: "{{ wg_public_key.stdout }}"
-#       when: cross_network | bool
-
-#     - name: Share public keys with other hosts
-#       set_fact:
-#         public_keys: "{{ public_keys | default({}) | combine({inventory_hostname: wg_public}) }}"
-#       when: cross_network | bool
-#       delegate_to: localhost
-#       delegate_facts: true
-
-#     - name: Create WireGuard configuration directory
-#       file:
-#         path: /etc/wireguard
-#         state: directory
-#         mode: '0700'
-#       when: cross_network | bool
-
-#     - name: Create WireGuard confiwireguard_mtuguration
-#       template:
-#         src: wg0.conf.j2
-#         dest: /etc/wireguard/wg0.conf
-#         owner: root
-#         group: root
-#         mode: '0600'
-#       when: cross_network | bool
-#       vars:
-#         node_index: "{{ groups['all'].index(inventory_hostname) }}"
-#         wireguard_cidr: "10.10.10.0/24"
-#         wireguard_ip: "10.10.10.{{ node_index + 1 }}"
-
-#     - name: Start WireGuard
-#       systemd:
-#         name: wg-quick@wg0
-#         enabled: yes
-#         state: started
-#       when: cross_network | bool
-
-#     - name: Wait for WireGuard interface to be up
-#       wait_for:
-#         path: /sys/class/net/wg0/operstate
-#       when: cross_network | bool
-
+      
 - name: Setup control plane nodes
   hosts: control_plane
   become: yes

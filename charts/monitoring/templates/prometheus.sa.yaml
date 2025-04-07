@@ -42,7 +42,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: prometheus
-  namespace: "{{ .Release.namespace }}"
+  namespace: "{{ .Release.Namespace }}"
 ---
 # Additional role to enable discovery of endpoints in all namespaces
 apiVersion: rbac.authorization.k8s.io/v1
@@ -68,4 +68,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: prometheus
-  namespace: "{{ .Release.namespace }}"
+  namespace: "{{ .Release.Namespace }}"

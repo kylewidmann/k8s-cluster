@@ -2,7 +2,7 @@ name: Docker Image CI/CD
 
 on:
   push:
-    branches: [ "main", "network-tests" ]
+    branches: [ "main" ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ "main" ]

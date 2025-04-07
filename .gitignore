@@ -1,0 +1,7 @@
+**/terraform.tfvars
+**/*.tfstate*
+**/.terraform
+**/.terraform.lock.hcl
+values
+.vscode
+**/__pycache__/**

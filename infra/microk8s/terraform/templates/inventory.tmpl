@@ -1,0 +1,18 @@
+all:
+  children:
+    control_plane:
+      hosts:
+        %{~ for name, instance in instances ~}
+        %{~ if can(regex("^control", name)) ~}
+        ${name}:
+          ansible_host: ${instance.public_ip}
+        %{~ endif ~}
+        %{~ endfor ~}
+    workers:
+      hosts:
+        %{~ for name, instance in instances ~}
+        %{~ if can(regex("^worker", name)) ~}
+        ${name}:
+            ansible_host: ${instance.public_ip}
+        %{~ endif ~}
+        %{~ endfor ~}

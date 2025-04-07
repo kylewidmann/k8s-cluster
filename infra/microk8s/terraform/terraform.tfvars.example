@@ -1,0 +1,34 @@
+aws_region = "us-east-1"
+prefix     = "ansible-test"
+key_name   = "my-key-pair"  # Must exist in your AWS account
+
+instances = {
+  "ubuntu" = {
+    count         = 3
+    ami           = "ami-0fc5d935ebf8bc3bc"  # Ubuntu 22.04 Free Tier (us-east-1)
+    instance_type = "t2.micro"
+    user_data     = <<-EOF
+      #!/bin/bash
+      apt-get update
+      apt-get install -y python3 python3-pip
+      echo "Ready for Ansible testing!"
+    EOF
+    tags = {
+      OS = "Ubuntu"
+    }
+  },
+  "amazon-linux" = {
+    count         = 3
+    ami           = "ami-0230bd60aa48260c6"  # Amazon Linux 2023 Free Tier (us-east-1)
+    instance_type = "t2.micro"
+    user_data     = <<-EOF
+      #!/bin/bash
+      yum update -y
+      yum install -y python3 python3-pip
+      echo "Ready for Ansible testing!"
+    EOF
+    tags = {
+      OS = "AmazonLinux"
+    }
+  }
+}

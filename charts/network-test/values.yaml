@@ -42,7 +42,8 @@ tests: []
   #   command: "command args..."
 
 server:
-  port: 80
+  port: 8080
+  podAnnotations: {}
 
 serviceAccount:
   # Specifies whether a service account should be created

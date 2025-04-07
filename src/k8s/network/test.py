@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from abc import abstractmethod
 import os
+import socket
 import time
 import statistics
 import requests
@@ -26,6 +27,13 @@ METRICS = {
     'http_request_max': Gauge('http_request_max_ms', 'Maximum HTTP request time in milliseconds', ['url']),
     'http_request_avg': Gauge('http_request_avg_ms', 'Average HTTP request time in milliseconds', ['url']),
     'http_request_stddev': Gauge('http_request_stddev_ms', 'Standard deviation of HTTP request time', ['url']),
+
+    'tcp_connection_time': Gauge('tcp_connection_time_ms', 'TCP connection time in milliseconds', ['target', 'port']),
+    'tcp_connection_errors': Counter('tcp_connection_errors_total', 'Total TCP connection errors', ['target', 'port']),
+    'tcp_connection_min': Gauge('tcp_connection_min_ms', 'Minimum TCP connection time in milliseconds', ['target', 'port']),
+    'tcp_connection_max': Gauge('tcp_connection_max_ms', 'Maximum TCP connection time in milliseconds', ['target', 'port']),
+    'tcp_connection_avg': Gauge('tcp_connection_avg_ms', 'Average TCP connection time in milliseconds', ['target', 'port']),
+    'tcp_connection_stddev': Gauge('tcp_connection_stddev_ms', 'Standard deviation of TCP connection time', ['target', 'port']),
 }
 
 class NetworkTest:
@@ -88,6 +96,57 @@ class NetworkTest:
               logger.warning(f"No successful HTTP requests to {url}")
       
       return results
+  
+  def ping_host(self, host, port=80, timeout=5):
+    """Test TCP connection speed to a host:port"""
+    start_time = time.time()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        s.connect((host, port))
+        s.close()
+        elapsed = time.time() - start_time
+        METRICS['tcp_connection_time'].labels(target=host, port=port).set(elapsed * 1000)
+        return elapsed
+    except (socket.timeout, socket.error) as e:
+        logger.error(f"Error connecting to {host}:{port} - {str(e)}")
+        METRICS['tcp_connection_errors'].labels(target=host, port=port).inc()
+        return None
+
+  def run_ping_test(self, host, port, count=10, quiet=False):
+    """Run multiple ping tests and calculate statistics"""
+    if not quiet:
+        logger.info(f"Running TCP connection test to {host}:{port}")
+    results = []
+    
+    for i in range(count):
+        result = self.ping_host(host, port)
+        if result is not None:
+            results.append(result * 1000)  # Convert to ms
+            if not quiet:
+                logger.info(f"Ping {i+1}/{count}: {result * 1000:.2f} ms")
+        time.sleep(0.2)  # Short delay between pings
+    
+    if results:
+        # Update Prometheus metrics with statistics
+        METRICS['tcp_connection_min'].labels(target=host, port=port).set(min(results))
+        METRICS['tcp_connection_max'].labels(target=host, port=port).set(max(results))
+        METRICS['tcp_connection_avg'].labels(target=host, port=port).set(statistics.mean(results))
+        if len(results) > 1:
+            METRICS['tcp_connection_stddev'].labels(target=host, port=port).set(statistics.stdev(results))
+        
+        if not quiet:
+            logger.info(f"\nResults for {host}:{port}:")
+            logger.info(f"  Min: {min(results):.2f} ms")
+            logger.info(f"  Max: {max(results):.2f} ms")
+            logger.info(f"  Avg: {statistics.mean(results):.2f} ms")
+            if len(results) > 1:
+                logger.info(f"  Std Dev: {statistics.stdev(results):.2f} ms")
+    else:
+        if not quiet:
+            logger.warning(f"No successful connections to {host}:{port}")
+    
+    return results
 
   def run_scheduled_tests(self):
       """Run tests based on configuration"""

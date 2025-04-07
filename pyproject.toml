@@ -24,6 +24,9 @@ packages = [
 
 [tool.poetry.scripts]
 http-test = "k8s.network.http_test:main"
+node-test = "k8s.network.k8s_node_test:main"
+svc-test = "k8s.network.k8s_svc_test:main"
+ping-test = "k8s.network.ping_test:main"
 test-http-server = "k8s.utils.test_http_server:main"
 
 [build-system]

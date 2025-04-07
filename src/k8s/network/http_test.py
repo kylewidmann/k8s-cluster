@@ -16,12 +16,11 @@ class HttpNetworkTest(NetworkTest):
     def _run_scheduled_tests(self):
       # HTTP tests
       for url in self.config.get('http_targets', []):
-          self.run_http_test(url, config.get('http_count', 5), quiet=True)
+          self.run_http_test(url, self.config.get('http_count', 5), quiet=True)
 
 
 def load_config_from_env():
     """Load configuration from environment variables"""
-    global config
     config = {
         'http_targets': [],
         'interval_seconds': int(os.environ.get('NETWORK_TEST_INTERVAL', 60)),
@@ -32,6 +31,8 @@ def load_config_from_env():
     if http_targets:
         config['http_targets'] = [url.strip() for url in http_targets.split(',')]
         config['http_count'] = int(os.environ.get('HTTP_COUNT', 3))
+
+    return config
 
 def main():
     parser = argparse.ArgumentParser(description='Kubernetes Network Speed Test with Prometheus Metrics')
@@ -45,12 +46,11 @@ def main():
     http_parser.add_argument('--count', type=int, default=5, help='Number of tests to run (default: 5)')
     
     # Daemon mode for continuous monitoring
-    daemon_parser = subparsers.add_parser('daemon', help='Run as a daemon for continuous monitoring')
-    daemon_parser.add_argument('--port', type=int, default=8000, help='Port for Prometheus metrics (default: 8000)')
+    subparsers.add_parser('daemon', help='Run as a daemon for continuous monitoring')
     
     args = parser.parse_args()
 
-    load_config_from_env()
+    config = load_config_from_env()
     test = HttpNetworkTest(config)
 
     if args.command == 'http':

@@ -1,0 +1,31 @@
+[project]
+name = "k8s"
+version = "0.1.0"
+description = "Test performance for self managed k8s cluster"
+authors = [
+    {name = "Kyle Widmann",email = "kyle.widmann@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests (>=2.32.3,<3.0.0)",
+    "prometheus-client (>=0.21.1,<0.22.0)",
+    "schedule (>=1.2.2,<2.0.0)",
+    "uvicorn (>=0.34.0,<0.35.0)",
+    "fastapi (>=0.115.12,<0.116.0)",
+    "flask (>=3.1.0,<4.0.0)",
+    "dotenv (>=0.9.9,<0.10.0)"
+]
+
+[tool.poetry]
+packages = [
+  { include = "k8s", from = "src" }
+]
+
+[tool.poetry.scripts]
+http-test = "k8s.network.http_test:main"
+test-http-server = "k8s.utils.test_http_server:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

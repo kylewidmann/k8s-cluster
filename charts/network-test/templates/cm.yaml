@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: network-test-config
+data:
+  # Test interval (in seconds)
+  NETWORK_TEST_INTERVAL: "{{ .Values.config.interval | default 60 }}"
+  
+  # TCP connection tests (format: host:port,host:port)
+  TCP_TARGETS: '{{ .Values.config.tcpTargets | join "," }}'
+  TCP_COUNT: "{{ .Values.config.tcpCount | default 5 }}"
+  
+  # HTTP endpoint tests (comma-separated URLs)
+  HTTP_TARGETS: '{{ .Values.config.httpTargets | join "," }}'
+  HTTP_COUNT: "{{ .Values.config.httpCount | default 3 }}"
+  
+  # Kubernetes service tests (format: service:namespace:port)
+  K8S_SERVICES: '{{ .Values.config.k8sServices | join "," }}'
+  SERVICE_COUNT: "{{ .Values.config.serviceCount | default 5 }}"
+  
+  # Kubernetes node tests (comma-separated IPs or hostnames)
+  K8S_NODES: '{{ .Values.config.k8sNodes | join "," }}'
+  NODE_PORT: "{{ .Values.config.nodePort | default 22 }}"
+  NODE_COUNT: "{{ .Values.config.nodeCount | default 3 }}"

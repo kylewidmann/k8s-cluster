@@ -36,7 +36,7 @@ jobs:
       - name: Extract version from pyproject.toml
         id: version
         run: |
-          VERSION=$(python -c "import tomli; print(tomli.loads(open('pyproject.toml', 'rb').read())['project']['version'])")
+          VERSION=$(python -c "import tomli; print(tomli.loads(open('pyproject.toml', 'r').read())['project']['version'])")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 

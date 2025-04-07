@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install tomli package
+        run: pip install tomli
+
       - name: Extract version from pyproject.toml
         id: version
         run: |

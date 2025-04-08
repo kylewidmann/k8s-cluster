@@ -5,3 +5,5 @@
 values
 .vscode
 **/__pycache__/**
+**/inventory.yml
+!**/templates/inventory.yml

@@ -20,4 +20,5 @@ module "main" {
   key_name = var.key_name
   instances = var.instances
   node_ingress = var.node_ingress
+  inventory_tmpl_path = "./templates/inventory.tmpl"
 }

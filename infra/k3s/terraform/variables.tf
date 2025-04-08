@@ -73,3 +73,9 @@ variable "instances" {
     }
   }
 }
+
+variable "inventory_tmpl_path" {
+  description = "Path to a jinja2 template to use for creating ansible inventory"
+  type = string
+  default = null
+}

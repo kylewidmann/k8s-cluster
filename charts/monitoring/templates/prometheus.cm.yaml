@@ -83,3 +83,16 @@ data:
             regex: '^/system\.slice/(.+)\.service$'
             target_label: systemd_service_name
             replacement: '${1}'
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - monitoring
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: prometheus-node-exporter
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: metrics
+            action: keep

@@ -14,9 +14,7 @@ server_config_yaml:  |
   disable:
     - traefik
     - servicelb
-  flannel-backend: wireguard-native
-  node-ip: {{ ansible_default_ipv4.address }}
-  flannel-external-ip: true
-
-agent_config_yaml: |
-  node-external-ip: {{ ansible_default_ipv4.address }}
+  node-ip: {{ wireguard_ip }}
+  node-external-ip: {{ wireguard_ip }}
+  advertise-address: {{ wireguard_ip }}
+  flannel-iface: wg0

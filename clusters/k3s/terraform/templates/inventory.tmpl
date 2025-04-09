@@ -1,0 +1,16 @@
+k3s_cluster:
+  children:
+    server:
+      hosts:
+        %{~ for name, instance in instances ~}
+        %{~ if can(regex("^control", name)) ~}
+        ${instance.public_ip}:
+        %{~ endif ~}
+        %{~ endfor ~}
+    agent:
+      hosts:
+        %{~ for name, instance in instances ~}
+        %{~ if can(regex("^worker", name)) ~}
+        ${instance.public_ip}:
+        %{~ endif ~}
+        %{~ endfor ~}

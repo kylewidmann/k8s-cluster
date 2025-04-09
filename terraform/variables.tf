@@ -22,6 +22,11 @@ variable "public_subnet_cidr" {
   default     = "10.0.1.0/24"
 }
 
+variable "node_ingress" {
+  description = "Port to allow for ingress on nodes"
+  type        = list(number)
+}
+
 variable "key_name" {
   description = "The name of the key pair to use for SSH access"
   type        = string
@@ -67,4 +72,10 @@ variable "instances" {
       tags          = {}
     }
   }
+}
+
+variable "inventory_tmpl_path" {
+  description = "Path to a jinja2 template to use for creating ansible inventory"
+  type = string
+  default = null
 }

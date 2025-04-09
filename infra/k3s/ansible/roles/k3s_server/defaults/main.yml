@@ -9,3 +9,14 @@ server_group: server  # noqa var-naming[no-role-prefix]
 agent_group: agent  # noqa var-naming[no-role-prefix]
 use_external_database: false # noqa var-naming[no-role-prefix]
 extra_server_args: "" # noqa var-naming[no-role-prefix]
+server_config_yaml:  |
+  write-kubeconfig-mode: "0644"
+  disable:
+    - traefik
+    - servicelb
+  flannel-backend: wireguard-native
+  node-ip: {{ ansible_default_ipv4.address }}
+  flannel-external-ip: true
+
+agent_config_yaml: |
+  node-external-ip: {{ ansible_default_ipv4.address }}

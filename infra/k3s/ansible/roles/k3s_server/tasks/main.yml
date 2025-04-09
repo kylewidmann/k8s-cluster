@@ -51,12 +51,9 @@
         - --write-kubeconfig-mode 644
         - --disable servicelb
         - --disable traefik
-        - --disable metrics-server
-        - --disable local-storage
-        - --node-external-ip {{ wireguard_ip }}
-        - --advertise-address {{ wireguard_ip }}
-        - --flannel-iface wg0
-        - --tls-san {{ wireguard_ip }}
+        - --flannel-backend wireguard-native
+        - --node-ip {{ ansible_default_ipv4.address }}
+        - --flannel-external-ip
       environment:
         INSTALL_K3S_SKIP_START: "true"
         INSTALL_K3S_VERSION: "{{ k3s_version }}"

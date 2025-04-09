@@ -94,6 +94,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .
+        file: docker/Dockerfile
         push: ${{ needs.check-version.outputs.should_push == 'true' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}

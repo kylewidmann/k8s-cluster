@@ -1,0 +1,16 @@
+all:
+  children:
+    karmada:
+      hosts:
+        %{~ for name, instance in instances ~}
+        %{~ if can(regex("^control", name)) ~}
+        ${instance.public_ip}:
+        %{~ endif ~}
+        %{~ endfor ~}
+    k3s_clusters:
+      hosts:
+        %{~ for name, instance in instances ~}
+        %{~ if can(regex("^cluster", name)) ~}
+        ${instance.public_ip}:
+        %{~ endif ~}
+        %{~ endfor ~}

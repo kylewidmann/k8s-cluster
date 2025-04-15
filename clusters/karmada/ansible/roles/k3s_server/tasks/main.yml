@@ -1,4 +1,25 @@
 ---
+- name: Set hostnames
+  ansible.builtin.copy:
+    content: |
+      {% for host in groups['karmada'] %}
+      {{ host }}: 
+        hostname: karmada-host{% if groups['karmada']|length > 1 %}{{ groups['karmada'].index(host) + 1 }}{% endif %}{{''}}
+      {% endfor %}
+      {% for host in groups['k3s_clusters'] %}
+      {{ host }}: 
+        hostname: cluster{{ groups['k3s_clusters'].index(host) + 1 }}
+      {% endfor %}
+    dest: "{{ playbook_dir }}/../group_vars/all/hostnames.yml"
+  delegate_to: 127.0.0.1
+  become: false
+  run_once: true
+
+- name: Include the generated hostnames
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../group_vars/all/hostnames.yml"
+    name: hostnames
+
 # - name: Get k3s installed version
 #   ansible.builtin.command: k3s --version
 #   register: k3s_version_output
@@ -190,16 +211,14 @@
         - csa_result.rc == 0
 
     - name: Setup kubeconfig context on control node
-      when: kubeconfig is not defined or kubeconfig == (ansible_env.HOME + '/.kube/config.new')
       ansible.builtin.replace:
         path: "{{ kubeconfig }}"
         regexp: 'default'
-        replace: '{{ cluster_context | default(inventory_hostname) }}'
+        replace: '{{ cluster_context }}'
       delegate_to: 127.0.0.1
       become: false
 
     - name: Merge with any existing kubeconfig on control node
-      when: kubeconfig is not defined or kubeconfig == (ansible_env.HOME + '/.kube/config.new')
       ansible.builtin.shell: |
         TFILE=$(mktemp)
         mkdir -p ~/.kube
@@ -214,7 +233,8 @@
         - mv_result.rc == 0
 
   vars:
-    kubeconfig: "{{ kubeconfig_dir }}/{{ inventory_hostname }}.config"
+    cluster_context: "{{ hostnames[inventory_hostname]['hostname'] }}"
+    kubeconfig: "{{ kubeconfig_dir }}/{{ hostnames[inventory_hostname]['hostname'] }}.config"
 
 - name: Setup kubectl for user
   when: user_kubectl | default(true)

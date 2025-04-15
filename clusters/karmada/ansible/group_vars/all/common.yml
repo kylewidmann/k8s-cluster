@@ -35,3 +35,4 @@ agent_group: "k3s_agents"
 
 # K3s Configuration
 k3s_version: v1.31.7+k3s1
+

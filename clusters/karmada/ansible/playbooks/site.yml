@@ -1,19 +1,14 @@
 ---
-# - name: Cluster prep
-#   hosts: all
-#   gather_facts: true
-#   become: true
-#   roles:
-#     - role: common
-
-# - name: Setup K3S clusters
-#   hosts: all
-#   become: true
-#   roles:
-#     - role: k3s_server
+- name: Cluster prep
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - role: common
 
 - name: Setup K3S clusters
   hosts: all
+  become: true
   roles:
     - role: k3s_server
 

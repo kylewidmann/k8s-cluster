@@ -1,18 +1,18 @@
 ---
-# - name: Cluster prep
-#   hosts: all
-#   become: true
-#   roles:
-#     - role: common
+- name: Cluster prep
+  hosts: all
+  become: true
+  roles:
+    - role: common
 
 - name: Setup K3S clusters
   hosts: all
   become: true
   roles:
-    - role: k3s_server
+    - role: k3s
 
-# - name: Setup Karmada Control Plane
-#   hosts: control
-#   become: true
-#   roles:
-#     - role: karmada_host
+- name: Setup Karmada Control Plane and Clusters
+  hosts: all
+  become: true
+  roles:
+    - role: karmada

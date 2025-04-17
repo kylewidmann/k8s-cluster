@@ -2,3 +2,7 @@
   hostname: karmada-host
 54.226.0.34: 
   hostname: cluster1
+54.196.182.27: 
+  hostname: cluster2
+34.207.113.50: 
+  hostname: cluster3

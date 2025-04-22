@@ -4,10 +4,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $fullName }}-{{ $test.name | lower | replace "_" "-" }}
+  name: {{ printf "%s-%s" $fullName $test.name | lower | replace "_" "-" }}
   labels:
     {{- include "network-test.labels" $ | nindent 4 }}
-    test-name: {{ $test.name }}
+    testName: {{ $test.name }}
 spec:
   {{- if not $.Values.autoscaling.enabled }}
   replicas: {{ $.Values.replicaCount }}
@@ -15,7 +15,7 @@ spec:
   selector:
     matchLabels:
       {{- include "network-test.selectorLabels" $ | nindent 6 }}
-      test-name: {{ $test.name }}
+      testName: {{ $test.name }}
   template:
     metadata:
       annotations:
@@ -24,7 +24,7 @@ spec:
         {{- end }}
       labels:
         {{- include "network-test.labels" $ | nindent 8 }}
-        test-name: {{ $test.name }}
+        testName: {{ $test.name }}
         {{- with $.Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

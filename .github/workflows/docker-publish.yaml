@@ -1,11 +1,12 @@
+---
 name: Docker Image CI
-
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
-
+    branches:
+      - main
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -13,90 +14,82 @@ jobs:
       version_changed: ${{ steps.check-version.outputs.version_changed }}
       version: ${{ steps.check-version.outputs.version }}
       should_push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check-version.outputs.version_changed == 'true' }}
-    
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 2  # We need at least 2 commits to compare changes
-    
-    - name: Check if version changed in pyproject.toml
-      id: check-version
-      run: |
-        # Extract current version
-        if [ -f "pyproject.toml" ]; then
-          CURRENT_VERSION=$(grep -o 'version = "[^"]*"' pyproject.toml | cut -d'"' -f2)
-          echo "Current version: $CURRENT_VERSION"
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          
-          # For pull requests or pushes to main, check if version changed
-          if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            # Check if the file exists in previous commit
-            if git cat-file -e HEAD~1:pyproject.toml; then
-              PREVIOUS_VERSION=$(git show HEAD~1:pyproject.toml | grep -o 'version = "[^"]*"' | cut -d'"' -f2)
-              echo "Previous version: $PREVIOUS_VERSION"
-              
-              if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
-                echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
-                echo "version_changed=true" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2  # We need at least 2 commits to compare changes
+      - name: Check if version changed in pyproject.toml
+        id: check-version
+        run: |
+          # Extract current version
+          if [ -f "pyproject.toml" ]; then
+            CURRENT_VERSION=$(grep -o 'version = "[^"]*"' pyproject.toml | cut -d'"' -f2)
+            echo "Current version: $CURRENT_VERSION"
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            
+            # For pull requests or pushes to main, check if version changed
+            if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              # Check if the file exists in previous commit
+              if git cat-file -e HEAD~1:pyproject.toml; then
+                PREVIOUS_VERSION=$(git show HEAD~1:pyproject.toml | grep -o 'version = "[^"]*"' | cut -d'"' -f2)
+                echo "Previous version: $PREVIOUS_VERSION"
+                
+                if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+                  echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+                  echo "version_changed=true" >> $GITHUB_OUTPUT
+                else
+                  echo "Version unchanged"
+                  echo "version_changed=false" >> $GITHUB_OUTPUT
+                fi
               else
-                echo "Version unchanged"
-                echo "version_changed=false" >> $GITHUB_OUTPUT
+                # File didn't exist in previous commit, treat as new version
+                echo "pyproject.toml is new, treating as version change"
+                echo "version_changed=true" >> $GITHUB_OUTPUT
               fi
             else
-              # File didn't exist in previous commit, treat as new version
-              echo "pyproject.toml is new, treating as version change"
-              echo "version_changed=true" >> $GITHUB_OUTPUT
+              # For PRs, we don't care if version changed for build purposes
+              echo "PR build - not checking for version change"
+              echo "version_changed=false" >> $GITHUB_OUTPUT
             fi
           else
-            # For PRs, we don't care if version changed for build purposes
-            echo "PR build - not checking for version change"
+            echo "pyproject.toml not found"
             echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "version=unknown" >> $GITHUB_OUTPUT
           fi
-        else
-          echo "pyproject.toml not found"
-          echo "version_changed=false" >> $GITHUB_OUTPUT
-          echo "version=unknown" >> $GITHUB_OUTPUT
-        fi
-
   build:
     needs: check-version
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-      
-    - name: Login to GitHub Container Registry
+      - uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to GitHub Container Registry
       # Only login if we're going to push (main branch with version change)
-      if: needs.check-version.outputs.should_push == 'true'
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Extract metadata for Docker
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ghcr.io/${{ github.repository }}
-        tags: |
-          type=raw,value=${{ needs.check-version.outputs.version }},enable=${{ needs.check-version.outputs.should_push == 'true' }}
-          type=sha,enable=${{ needs.check-version.outputs.should_push == 'true' }}
-          type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
-    
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: docker/Dockerfile
-        push: ${{ needs.check-version.outputs.should_push == 'true' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        if: needs.check-version.outputs.should_push == 'true'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ needs.check-version.outputs.version }},enable=${{ needs.check-version.outputs.should_push == 'true' }}
+            type=sha,enable=${{ needs.check-version.outputs.should_push == 'true' }}
+            type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: ${{ needs.check-version.outputs.should_push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

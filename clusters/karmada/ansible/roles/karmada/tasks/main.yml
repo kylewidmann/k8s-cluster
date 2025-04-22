@@ -1,4 +1,5 @@
 ---
+
 - name: Karmada host prereqs
   ansible.builtin.include_tasks: install_prereqs.yml
   when: inventory_hostname in groups['karmada']

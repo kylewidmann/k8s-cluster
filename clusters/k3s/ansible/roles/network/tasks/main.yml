@@ -1,26 +1,29 @@
-# site.yml
 ---
+
 - name: Create temporary test file
-  file:
+  ansible.builtin.file:
     path: /tmp/connectivity-test
     state: touch
     mode: '0644'
   changed_when: false
 
 - name: Get public/external IP address
-  shell: "curl -s https://ifconfig.me || wget -qO- https://ifconfig.me"
+  ansible.builtin.uri:
+    url: https://ifconfig.me
+    return_content: true
   register: public_ip
   changed_when: false
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Set detected public IP
-  set_fact:
-    detected_public_ip: "{{ public_ip.stdout }}"
+  ansible.builtin.set_fact:
+    detected_public_ip: '{{ public_ip.stdout }}'
   when: public_ip.rc == 0
 
 - name: Verify detected IP matches inventory IP
-  debug:
-    msg: "Warning: Detected public IP ({{ detected_public_ip }}) doesn't match inventory ansible_host ({{ ansible_host }}). This might cause connectivity issues."
+  ansible.builtin.debug:
+    msg: "Warning: Detected public IP ({{ detected_public_ip }}) doesn't match inventory ansible_host \
+      ({{ ansible_host }}). This might cause connectivity issues."
   when:
     - public_ip.rc == 0
     - detected_public_ip != ansible_host
@@ -41,82 +44,84 @@
 #   when: cross_network | bool
 
 - name: Set Wireguard IPs
-  set_fact:
-    wireguard_ip: "10.10.10.{{ (groups['k3s_cluster'].index(inventory_hostname) + 1) }}"
-
+  ansible.builtin.set_fact:
+    wireguard_ip: 10.10.10.{{ (groups['k3s_cluster'].index(inventory_hostname) + 1) }}
 
 - name: Set primary node wireguard IP
-  set_fact:
+  ansible.builtin.set_fact:
     primary_node: "{{ groups['server'][0] }}"
     primary_wg_ip: "{{ hostvars[groups['server'][0]].wireguard_ip }}"
 
 - name: Ensure ping is installed
-  apt:
+  ansible.builtin.apt:
     name:
       - iputils-ping
     state: present
 
 - name: Update apt cache
-  apt:
-    update_cache: yes
+  ansible.builtin.apt:
+    update_cache: true
 
 - name: Install Wireguard
-  apt:
+  ansible.builtin.apt:
     name: wireguard
     state: present
 
 - name: Generate WireGuard private key
-  shell: wg genkey
+  ansible.builtin.command: wg genkey
   register: wg_private_key
   changed_when: false
   when: cross_network | bool
 
 - name: Store WireGuard private key
-  set_fact:
-    wg_private: "{{ wg_private_key.stdout }}"
+  ansible.builtin.set_fact:
+    wg_private: '{{ wg_private_key.stdout }}'
   when: cross_network | bool
 
 - name: Debug WG private
-  debug:
-    msg: "{{ wg_private is defined }}"
+  ansible.builtin.debug:
+    msg: '{{ wg_private is defined }}'
   when: wg_private is defined
 
 - name: Generate WireGuard public key
-  shell: echo "{{ wg_private }}" | wg pubkey
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      echo "{{ wg_private }}" | wg pubkey
   register: wg_public_key
   changed_when: false
   when: cross_network | bool
 
 - name: Store WireGuard public key
-  set_fact:
-    wg_public: "{{ wg_public_key.stdout }}"
+  ansible.builtin.set_fact:
+    wg_public: '{{ wg_public_key.stdout }}'
   when: cross_network | bool
 
 - name: Debug WG public
-  debug:
-    msg: "{{ wg_public is defined }}"
+  ansible.builtin.debug:
+    msg: '{{ wg_public is defined }}'
   when: wg_public is defined
 
 - name: Share public keys with other hosts
-  set_fact:
-    public_keys: "{{ public_keys | default({}) | combine({inventory_hostname: wg_public}) }}"
+  ansible.builtin.set_fact:
+    public_keys: '{{ public_keys | default({}) | combine({inventory_hostname: wg_public}) }}'
   when: cross_network | bool
   delegate_to: localhost
   delegate_facts: true
 
 - name: Create WireGuard configuration directory
-  file:
+  ansible.builtin.file:
     path: /etc/wireguardprimary_node
     state: directory
     mode: '0700'
   when: cross_network | bool
 
 - name: Show WG config
-  debug:
+  ansible.builtin.debug:
     msg: "{{ lookup('ansible.builtin.template', 'wg0.conf.j2') }}"
 
 - name: Create WireGuard configuration
-  template:
+  ansible.builtin.template:
     src: wg0.conf.j2
     dest: /etc/wireguard/wg0.conf
     owner: root
@@ -125,18 +130,19 @@
   when: cross_network | bool
 
 - name: Start WireGuard
-  systemd:
+  ansible.builtin.systemd:
     name: wg-quick@wg0
-    enabled: yes
+    enabled: true
     state: started
   when: cross_network | bool
 
 - name: Set MTU for Wireguard interface
-  command: ip link set mtu {{ wireguard_mtu | default(1380) }} dev wg0
+  ansible.builtin.command: ip link set mtu {{ wireguard_mtu | default(1380) }} dev wg0
   become: true
+  changed_when: false
 
 - name: Set DNS for wg0
-  shell: |
+  ansible.builtin.shell: |
     resolvectl dns wg0 8.8.8.8 8.8.4.4
     resolvectl domain wg0 ~.
   become: true
@@ -145,25 +151,27 @@
   failed_when: resolvectl_result.rc != 0
 
 - name: Restart WG
-  shell: wg-quick down wg0 && wg-quick up wg0
+  ansible.builtin.shell: wg-quick down wg0 && wg-quick up wg0
+  changed_when: false
 
 - name: Wait for WireGuard interface to be up
-  wait_for:
+  ansible.builtin.wait_for:
     path: /sys/class/net/wg0/operstate
   when: cross_network | bool
 
 - name: Ping primary node from non-primary nodes
-  command: ping -c 1 {{ primary_wg_ip }}
+  ansible.builtin.command: ping -c 1 {{ primary_wg_ip }}
   register: ping_result
   until: ping_result.rc == 0
   retries: 3
   delay: 5
   when: not inventory_hostname == primary_node
   failed_when: ping_result.rc != 0
+  changed_when: false
 
 - name: Fail if primary node is not pingable
-  fail:
-    msg: "Cannot ping primary node at {{ primary_wg_ip }} from {{ inventory_hostname }}"
+  ansible.builtin.fail:
+    msg: Cannot ping primary node at {{ primary_wg_ip }} from {{ inventory_hostname }}
   when:
     - not inventory_hostname == primary_node
     - ping_result.failed
@@ -171,21 +179,21 @@
 - name: Set hostnames
   ansible.builtin.set_fact:
     hostname: >-
-      {% if 'server' in group_names %}server{% elif 'agent' in group_names %}agent{% endif %}{{ 
-      (groups['server'] if 'server' in group_names else groups['agent']).index(inventory_hostname) + 1 }}
+      {% if 'server' in group_names %}server{% elif 'agent' in group_names %}agent{% endif %}\
+        {{  (groups['server'] if 'server' in group_names else groups['agent']).index(inventory_hostname) + 1 }}
 
 - name: Debug hostnames
-  debug:
-    msg: "{{ ansible_host }} {{ hostname }}"
+  ansible.builtin.debug:
+    msg: '{{ ansible_host }} {{ hostname }}'
 
 - name: Set hostname
-  hostname:
-    name: "{{ hostname }}"
+  ansible.builtin.hostname:
+    name: '{{ hostname }}'
 
 - name: Update /etc/hosts with cluster nodes
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/hosts
-    regexp: ".*{{ hostname }}$"
-    line: "{{ wireguard_ip }} {{ hostname }}"
+    regexp: .*{{ hostname }}$
+    line: '{{ wireguard_ip }} {{ hostname }}'
     state: present
   loop: "{{ groups['k3s_cluster'] }}"

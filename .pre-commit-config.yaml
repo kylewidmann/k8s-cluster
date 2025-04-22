@@ -1,0 +1,18 @@
+---
+repos:
+  - repo: local
+    hooks:
+      - id: ansible-lint
+        name: ansible-lint
+        entry: >-
+          bash -c 'for dir in clusters/*/ansible/; do (cd "$dir" && echo "Running \
+          ansible-lint in $dir" && ansible-lint ) || exit 1; done'
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.30.0
+    hooks:
+      - id: yamllint
+        files: \.(yaml|yml)$

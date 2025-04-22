@@ -1,25 +1,25 @@
-# site.yml
 ---
+
 - name: Common setup for all nodes
   hosts: all
-  become: yes
+  become: true
   tasks:
 
     - name: Set Wireguard IPs
-      set_fact:
-        wireguard_ip: "10.10.10.{{ (groups['all'].index(inventory_hostname) + 1) }}"
+      ansible.builtin.set_fact:
+        wireguard_ip: 10.10.10.{{ (groups['all'].index(inventory_hostname) + 1) }}
 
     - name: Show WG IPs
-      debug:
-        msg: "{{ wireguard_ip }}"
+      ansible.builtin.debug:
+        msg: '{{ wireguard_ip }}'
 
     - name: Update apt cache
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
         cache_valid_time: 3600
 
     - name: Install required packages
-      apt:
+      ansible.builtin.apt:
         name:
           - apt-transport-https
           - ca-certificates
@@ -31,87 +31,89 @@
         state: present
 
     - name: Ensure snap is up to date
-      snap:
+      community.general.snap:
         name: core
         state: present
 
     - name: Set hostname
-      hostname:
-        name: "{{ inventory_hostname }}"
+      ansible.builtin.hostname:
+        name: '{{ inventory_hostname }}'
 
     - name: Update /etc/hosts with cluster nodes
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/hosts
-        regexp: ".*{{ item }}$"
-        line: "{{ hostvars[item].ansible_host }} {{ item }}"
+        regexp: .*{{ item }}$
+        line: '{{ hostvars[item].ansible_host }} {{ item }}'
         state: present
       loop: "{{ groups['all'] }}"
 
     - name: Install MicroK8s
-      snap:
+      community.general.snap:
         name: microk8s
-        channel: "{{ microk8s_channel }}"
-        classic: yes
+        channel: '{{ microk8s_channel }}'
+        classic: true
         state: present
 
     - name: Add user to microk8s group
-      user:
-        name: "{{ ansible_user }}"
+      ansible.builtin.user:
+        name: '{{ ansible_user }}'
         groups: microk8s
-        append: yes
+        append: true
 
     - name: Create .kube directory for user
-      file:
-        path: "/home/{{ ansible_user }}/.kube"
+      ansible.builtin.file:
+        path: /home/{{ ansible_user }}/.kube
         state: directory
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: '{{ ansible_user }}'
+        group: '{{ ansible_user }}'
         mode: '0755'
 
     - name: Configure MicroK8s to use wireguard IPs
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /var/snap/microk8s/current/args/kube-apiserver
-        regexp: "^--advertise-address="
-        line: "--advertise-address={{ wireguard_ip }}"
+        regexp: ^--advertise-address=
+        line: --advertise-address={{ wireguard_ip }}
         state: present
       register: config_updated
       when: cross_network | bool
 
     - name: Configure kubelet to use wireguard IPs
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /var/snap/microk8s/current/args/kubelet
-        regexp: "^--node-ip="
-        line: "--node-ip={{ wireguard_ip }}"
+        regexp: ^--node-ip=
+        line: --node-ip={{ wireguard_ip }}
         state: present
       register: kubelet_updated
       when: cross_network | bool
 
     - name: Restart MicroK8s if configuration was updated
-      command: snap restart microk8s
+      ansible.builtin.command: snap restart microk8s
       when: (config_updated is changed or kubelet_updated is changed) and cross_network | bool
+      changed_when: false
 
     - name: Wait for MicroK8s to be ready
-      command: microk8s status --wait-ready
+      ansible.builtin.command: microk8s status --wait-ready
       changed_when: false
       register: microk8s_status
       retries: 10
       delay: 10
       until: microk8s_status.rc == 0
-      
+
 - name: Setup control plane nodes
   hosts: control_plane
-  become: yes
+  become: true
   tasks:
 
     - name: Get first control node
-      set_fact:
+      ansible.builtin.set_fact:
         first_control_node: "{{ groups['control_plane'][0] }}"
 
     - name: Initialize cluster on first control node
+      when: inventory_hostname == first_control_node
       block:
 
         - name: Configure DNS for cross-network setup
-          command: microk8s enable dns:{{ ansible_host }},{{ wireguard_ip | default(ansible_host) }}
+          ansible.builtin.command: microk8s enable dns:{{ ansible_host }},{{ wireguard_ip | default(ansible_host) }}
           args:
             creates: /var/snap/microk8s/current/addons/dns/enabled
           when:
@@ -123,41 +125,40 @@
           until: dns_result.rc == 0
 
         - name: Enable required MicroK8s addons on first control node
-          command: "microk8s enable {{ item }}"
+          ansible.builtin.command: microk8s enable {{ item }}
           args:
             creates: /var/snap/microk8s/current/addons/dns/enabled
           when: inventory_hostname == first_control_node
-          loop: "{{ microk8s_addons }}"
+          loop: '{{ microk8s_addons }}'
           register: addon_result
           retries: 3
           delay: 10
           until: addon_result.rc == 0
 
         - name: Get join token from first control node
-          command: microk8s add-node --token-ttl 86400
+          ansible.builtin.command: microk8s add-node --token-ttl 86400
           register: join_command
-          when: 
+          when:
             - inventory_hostname == first_control_node
             - cross_network | bool
           changed_when: false
 
         - name: Set join command fact
-          set_fact:
-            join_command: "{{ join_command.stdout_lines[-1] if cross_network | bool else join_command_standard.stdout_lines[1] }}"
+          ansible.builtin.set_fact:
+            join_command: '{{ join_command.stdout_lines[-1] if cross_network | bool else join_command_standard.stdout_lines[1] }}'
           when: inventory_hostname == first_control_node
 
         - name: Show join command
-          debug:
-            msg: "{{ join_command }}"
-      when: inventory_hostname == first_control_node
+          ansible.builtin.debug:
+            msg: '{{ join_command }}'
 
     - name: Share join command with other hosts
-      set_fact:
+      ansible.builtin.set_fact:
         join_command: "{{ hostvars[first_control_node]['join_command'] }}"
       when: inventory_hostname != first_control_node
 
     - name: Join other control plane nodes to the cluster
-      command: "{{ join_command }}"
+      ansible.builtin.command: '{{ join_command }}'
       when:
         - inventory_hostname != first_control_node
         - join_command is defined
@@ -172,7 +173,7 @@
       changed_when: join_result.rc == 0
 
     - name: Configure high availability on all control nodes
-      command: microk8s enable ha-cluster
+      ansible.builtin.command: microk8s enable ha-cluster
       register: ha_result
       retries: 3
       delay: 10
@@ -183,49 +184,42 @@
         - "'already enabled' not in ha_result.stdout"
 
     - name: Get kubectl config from first control node
-      command: microk8s config
+      ansible.builtin.command: microk8s config
       register: kube_config
       when: inventory_hostname == first_control_node
       changed_when: false
 
     - name: Set kubectl config fact
-      set_fact:
-        kube_config: "{{ kube_config.stdout }}"
+      ansible.builtin.set_fact:
+        kube_config: '{{ kube_config.stdout }}'
       when: inventory_hostname == first_control_node
 
     - name: Share kubectl config with other hosts
-      set_fact:
+      ansible.builtin.set_fact:
         kube_config: "{{ hostvars[first_control_node]['kube_config'] }}"
       when: inventory_hostname != first_control_node
 
     - name: Write kubectl config to user's .kube/config
-      copy:
-        content: "{{ kube_config }}"
-        dest: "/home/{{ ansible_user }}/.kube/config"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+      ansible.builtin.copy:
+        content: '{{ kube_config }}'
+        dest: /home/{{ ansible_user }}/.kube/config
+        owner: '{{ ansible_user }}'
+        group: '{{ ansible_user }}'
         mode: '0600'
       when: kube_config is defined
 
-    # - name: Update cluster endpoint if using DNS
-    #   command: microk8s kubectl config set-cluster microk8s-cluster --server=https://{{ api_endpoint }}:16443
-    #   when: 
-    #     - cross_network | bool
-    #     - api_endpoint is defined
-    #   changed_when: false
-
 - name: Setup worker nodes
   hosts: workers
-  become: yes
+  become: true
   tasks:
 
     - name: Get join command from first control node
-      set_fact:
+      ansible.builtin.set_fact:
         join_command: "{{ hostvars[groups['control_plane'][0]]['join_command'] }}"
       when: hostvars[groups['control_plane'][0]]['join_command'] is defined
 
     - name: Join worker nodes to the cluster
-      command: "{{ join_command }} --worker"
+      ansible.builtin.command: '{{ join_command }} --worker'
       when: join_command is defined
       register: join_result
       retries: 3
@@ -238,34 +232,37 @@
       changed_when: join_result.rc == 0
 
 - name: Verify cluster
-  hosts: "{{ groups['control_plane'][0] }}"
-  become: yes
+  hosts: control_plane[0]
+  become: true
   tasks:
 
     - name: Wait for all nodes to be ready
-      command: microk8s kubectl get nodes
+      ansible.builtin.command: microk8s kubectl get nodes
       register: nodes_status
-      until: nodes_status.rc == 0 and ((groups['control_plane'] | length) + (groups['workers'] | length)) == (nodes_status.stdout_lines | select('match', '.*Ready.*') | list | length )
+      until: >-
+        nodes_status.rc == 0 and
+        ((groups['control_plane'] | length) + (groups['workers'] | length)) ==
+        (nodes_status.stdout_lines | select('match', '.*Ready.*') | list | length)
       retries: 12
       delay: 10
       changed_when: false
 
     - name: Display cluster information
-      command: microk8s kubectl get nodes -o wide
+      ansible.builtin.command: microk8s kubectl get nodes -o wide
       register: nodes_info
       changed_when: false
 
     - name: Show nodes information
-      debug:
+      ansible.builtin.debug:
         var: nodes_info.stdout_lines
 
     - name: Check cross-network connectivity between nodes
-      command: microk8s kubectl get pods -n kube-system
+      ansible.builtin.command: microk8s kubectl get pods -n kube-system
       register: pods_info
       when: cross_network | bool
       changed_when: false
 
     - name: Show pods information
-      debug:
+      ansible.builtin.debug:
         var: pods_info.stdout_lines
       when: cross_network | bool

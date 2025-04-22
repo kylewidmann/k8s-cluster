@@ -1,9 +1,11 @@
 ---
 apiVersion: policy.karmada.io/v1alpha1
 kind: PropagationPolicy
+
 metadata:
   name: deployment-to-all-clusters
   namespace: default
+
 spec:
   resourceSelectors:
     - apiVersion: apps/v1
@@ -11,9 +13,9 @@ spec:
       name: my-deployment
   placement:
     clusterAffinity:
-      clusterNames: [] # Empty array means propagate to all registered clusters
+      clusterNames: []  # Empty array means propagate to all registered clusters
     spreadConstraints:
       - spreadByField: cluster
-        maxGroups: 0 # 0 means no limit on the number of clusters
+        maxGroups: 0  # 0 means no limit on the number of clusters
     replicaScheduling:
-      replicaSchedulingType: Divided # Alternative: Duplicated
+      replicaSchedulingType: Divided  # Alternative: Duplicated

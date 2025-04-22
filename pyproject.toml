@@ -6,7 +6,7 @@ authors = [
     {name = "Kyle Widmann",email = "kyle.widmann@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0.0"
 dependencies = [
     "requests (>=2.32.3,<3.0.0)",
     "prometheus-client (>=0.21.1,<0.22.0)",
@@ -14,7 +14,11 @@ dependencies = [
     "uvicorn (>=0.34.0,<0.35.0)",
     "fastapi (>=0.115.12,<0.116.0)",
     "flask (>=3.1.0,<4.0.0)",
-    "dotenv (>=0.9.9,<0.10.0)"
+    "dotenv (>=0.9.9,<0.10.0)",
+    "ansible-lint (>=25.2.1,<26.0.0)",
+    "yamllint (>=1.37.0,<2.0.0)",
+    "pre-commit (>=4.2.0,<5.0.0)",
+    "yamlfix (>=1.17.0,<2.0.0)"
 ]
 
 [tool.poetry]
@@ -32,3 +36,16 @@ test-http-server = "k8s.utils.test_http_server:main"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.yamlfix]
+line_length=160
+explicit_start=true
+sequence_style="block_style"
+section_whitelines="1"
+whitelines="1"
+exclude = [
+  ".venv/**/*",
+  ".github/**/*",
+  "charts/",
+  "charts/**/*",
+]

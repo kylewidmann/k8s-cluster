@@ -4,13 +4,23 @@ repos:
     hooks:
       - id: ansible-lint
         name: ansible-lint
-        entry: >-
-          bash -c 'for dir in clusters/*/ansible/; do (cd "$dir" && echo "Running \
-          ansible-lint in $dir" && ansible-lint ) || exit 1; done'
+        entry: |
+          bash -c 'source .venv/bin/activate &&
+          for dir in clusters/*/ansible/; do (cd "$dir" &&
+          echo "Running ansible-lint in $dir" &&
+          ansible-lint ) || exit 1; done'
         language: system
         pass_filenames: false
         always_run: true
         verbose: true
+  # - repo: https://github.com/ansible/ansible-lint
+  #   rev: v25.2.1  # Use the appropriate version
+  #   hooks:
+  #     - id: ansible-lint
+  #       files: "clusters/.*/ansible/.*"
+  #       additional_dependencies: [ansible-core]
+
+
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.30.0
     hooks:

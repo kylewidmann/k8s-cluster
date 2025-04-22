@@ -12,13 +12,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        verbose: true
-  # - repo: https://github.com/ansible/ansible-lint
-  #   rev: v25.2.1  # Use the appropriate version
-  #   hooks:
-  #     - id: ansible-lint
-  #       files: "clusters/.*/ansible/.*"
-  #       additional_dependencies: [ansible-core]
 
 
   - repo: https://github.com/adrienverge/yamllint

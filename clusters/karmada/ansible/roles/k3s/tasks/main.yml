@@ -179,6 +179,7 @@
         cmd: |
           set -o pipefail
           openssl x509 -in /var/lib/rancher/k3s/server/tls/serving-kube-apiserver.crt -text -noout | grep -A1 "Subject Alternative Name"
+        executable: /bin/bash
       register: cert_hosts
       changed_when: false
       failed_when: false

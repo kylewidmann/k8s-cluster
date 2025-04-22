@@ -68,6 +68,7 @@
         cmd: |
           set -o pipefail
           openssl x509 -in /var/snap/microk8s/current/certs/server.crt -text | grep -A1 'Subject Alternative Name' | grep -o '{{ additional_ip }}'
+        executable: /bin/bash
       register: verify_result
       failed_when: false
       changed_when: false

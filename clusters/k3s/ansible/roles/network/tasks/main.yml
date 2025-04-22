@@ -88,6 +88,7 @@
     cmd: |
       set -o pipefail
       echo "{{ wg_private }}" | wg pubkey
+    executable: /bin/bash
   register: wg_public_key
   changed_when: false
   when: cross_network | bool

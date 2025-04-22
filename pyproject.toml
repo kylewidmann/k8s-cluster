@@ -18,7 +18,8 @@ dependencies = [
     "ansible-lint (>=25.2.1,<26.0.0)",
     "yamllint (>=1.37.0,<2.0.0)",
     "pre-commit (>=4.2.0,<5.0.0)",
-    "yamlfix (>=1.17.0,<2.0.0)"
+    "yamlfix (>=1.17.0,<2.0.0)",
+    "little-timmy (>=3.1.0,<4.0.0)"
 ]
 
 [tool.poetry]

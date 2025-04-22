@@ -20,7 +20,7 @@
   ansible.builtin.command: kubectl create namespace {{ karmada_namespace }}
   register: create_ns_result
   when: namespace_result.rc != 0
-  changed_when: namespace_reslt.rc != 0 and create_ns_result.rc = 0
+  changed_when: namespace_reslt.rc != 0 and create_ns_result.rc == 0
 
 - name: Check if Karmada is already installed
   ansible.builtin.command: helm status karmada -n {{ karmada_namespace }}
@@ -33,7 +33,6 @@
     src: karmada-values.yaml.j2
     dest: /tmp/karmada-values.yaml
     mode: '0644'
-  register: karmada_values_result
 
 - name: Get current Karmada values
   ansible.builtin.command: >
@@ -51,7 +50,6 @@
     dest: /tmp/karmada-current-values.yaml
     mode: '0644'
   when: karmada_status.rc == 0 and current_values is defined and current_values.rc == 0
-  register: current_values_file
   changed_when: false
 
 - name: Check if values have changed

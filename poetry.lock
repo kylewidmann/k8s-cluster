@@ -13,6 +13,21 @@ files = [
 ]
 
 [[package]]
+name = "ansible"
+version = "11.4.0"
+description = "Radically simple IT automation"
+optional = false
+python-versions = ">=3.11"
+groups = ["main"]
+files = [
+    {file = "ansible-11.4.0-py3-none-any.whl", hash = "sha256:fb56f6e5d5b08f69499a76f0972ac0b88ddc488ada1f386129ba40cb0b5c6ec7"},
+    {file = "ansible-11.4.0.tar.gz", hash = "sha256:d25a7f26bf5821f8043bc806019822fd2810bd65e6b6bafb698bbeedadba72bf"},
+]
+
+[package.dependencies]
+ansible-core = ">=2.18.4,<2.19.0"
+
+[[package]]
 name = "ansible-compat"
 version = "25.1.5"
 description = "Ansible compatibility goodies"
@@ -721,6 +736,26 @@ files = [
 
 [package.dependencies]
 referencing = ">=0.31.0"
+
+[[package]]
+name = "little-timmy"
+version = "3.1.0"
+description = "Little Timmy will try their best to find those unused and duplicated Ansible variables."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "little_timmy-3.1.0-py3-none-any.whl", hash = "sha256:ad61d5b3bc78afc49aef32287f05cb753068f52e8c41066b0ddd7ade2a977090"},
+    {file = "little_timmy-3.1.0.tar.gz", hash = "sha256:74777e31899949dcd5d77ac7119b29a53f0a5be1556d8dbf71bbde115bc25356"},
+]
+
+[package.dependencies]
+ansible = ">=3.0.0"
+jsonschema = ">=4.18.5"
+
+[package.extras]
+build = ["build"]
+tests = ["pytest"]
 
 [[package]]
 name = "maison"
@@ -1681,4 +1716,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0.0"
-content-hash = "3f8d5109b9356fd5db2689c8e63cd0895d9a9d58ccd1a20e7f4c1c100e294f99"
+content-hash = "d5e3ee8787b9ddad2fe6b862b384d6c6857b3a870683b0fcab069fc5d8f0a739"

@@ -15,7 +15,6 @@ karmada_kubectl_version: '{{ karmada_version }}'
 
 # Karmada configurations
 karmada_install_mode: host
-karmada_etcd_persistent: true
 karmada_api_server_node_port: 32443
 karmada_api_secure_port: 5443
 

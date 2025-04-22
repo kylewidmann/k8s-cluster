@@ -175,7 +175,6 @@
         path: /etc/rancher/k3s/k3s.yaml
         state: present
         timeout: 300
-      register: k3s_ready
 
     - name: Get Certs
       ansible.builtin.shell:
@@ -317,5 +316,4 @@
 - name: Verify single node k3s status
   ansible.builtin.command:
     cmd: k3s kubectl get nodes
-  register: nodes_status
   changed_when: false

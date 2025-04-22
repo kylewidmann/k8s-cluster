@@ -4,7 +4,6 @@ k3s_server_location: /var/lib/rancher/k3s
 systemd_dir: /etc/systemd/system  # noqa var-naming[no-role-prefix]
 api_port: 6443  # noqa var-naming[no-role-prefix]
 user_kubectl: true  # noqa var-naming[no-role-prefix]
-use_external_database: false  # noqa var-naming[no-role-prefix]
 extra_server_args: ''  # noqa var-naming[no-role-prefix]
 k3s_server_config_yaml: |-
   write-kubeconfig-mode: "0644"

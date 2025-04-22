@@ -1,12 +1,12 @@
 ---
 - name: Karmada host prereqs
-  include_tasks: install_prereqs.yml
+  ansible.builtin.include_tasks: install_prereqs.yml
   when: inventory_hostname in groups['karmada']
 
 - name: Karmada control plane setup
-  include_tasks: setup_karmada.yml
+  ansible.builtin.include_tasks: setup_karmada.yml
   when: inventory_hostname in groups['karmada']
 
 - name: Join member clusters
-  include_tasks: join_clusters.yml
+  ansible.builtin.include_tasks: join_clusters.yml
   when: inventory_hostname in groups['k3s_clusters']

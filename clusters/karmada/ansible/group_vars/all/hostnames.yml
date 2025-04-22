@@ -1,8 +1,10 @@
-54.157.235.232: 
-  hostname: karmada-host
-54.226.0.34: 
-  hostname: cluster1
-54.196.182.27: 
-  hostname: cluster2
-34.207.113.50: 
-  hostname: cluster3
+---
+host_mappings:
+  - ip: "54.157.235.232"
+    hostname: karmada-host
+  - ip: "54.226.0.34"
+    hostname: cluster1
+  - ip: "54.196.182.27"
+    hostname: cluster2
+  - ip: "34.207.113.50"
+    hostname: cluster3

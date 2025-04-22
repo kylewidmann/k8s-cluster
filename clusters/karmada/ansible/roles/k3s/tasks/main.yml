@@ -2,23 +2,27 @@
 - name: Set hostnames
   ansible.builtin.copy:
     content: |
-      {% for host in groups['karmada'] %}
-      {{ host }}: 
-        hostname: karmada-host{% if groups['karmada']|length > 1 %}{{ groups['karmada'].index(host) + 1 }}{% endif %}{{''}}
-      {% endfor %}
-      {% for host in groups['k3s_clusters'] %}
-      {{ host }}: 
-        hostname: cluster{{ groups['k3s_clusters'].index(host) + 1 }}
-      {% endfor %}
+      ---
+      host_mappings:
+        {% for host in groups['karmada'] %}
+        - ip: "{{ host }}"
+          hostname: "karmada-host{% if groups['karmada'] | length > 1 %}{{ groups['karmada'].index(host) + 1 }}{% endif %}{{ '''''' }}"
+        {% endfor %}
+        {% for host in groups['k3s_clusters'] %}
+        - ip: "{{ host }}"
+          hostname: "cluster{{ groups['k3s_clusters'].index(host) + 1 }}"
+        {% endfor %}
     dest: "{{ playbook_dir }}/../group_vars/all/hostnames.yml"
+    mode: "0644"
   delegate_to: 127.0.0.1
   become: false
   run_once: true
 
-- name: Include the generated hostnames
-  ansible.builtin.include_vars:
-    file: "{{ playbook_dir }}/../group_vars/all/hostnames.yml"
-    name: hostnames
+- name: Set hostname for each host
+  ansible.builtin.set_fact:
+    hostname: "{{ item.hostname }}"
+  loop: "{{ host_mappings }}"
+  when: item.ip == inventory_hostname
 
 - name: Get k3s installed version
   ansible.builtin.command: k3s --version
@@ -47,12 +51,12 @@
     - name: Download K3s binary for single node
       ansible.builtin.command:
         argv:
-        - /usr/local/bin/k3s-install.sh
-        - --write-kubeconfig-mode 644
-        - --disable servicelb
-        - --disable traefik
-        - --node-ip {{ ansible_host }}
-        - --advertise-address {{ ansible_host }}
+          - /usr/local/bin/k3s-install.sh
+          - --write-kubeconfig-mode 644
+          - --disable servicelb
+          - --disable traefik
+          - --node-ip {{ ansible_host }}
+          - --advertise-address {{ ansible_host }}
       environment:
         INSTALL_K3S_SKIP_START: "true"
         INSTALL_K3S_VERSION: "{{ k3s_version }}"
@@ -62,11 +66,11 @@
   when: ansible_user is defined
   ansible.builtin.lineinfile:
     path: "~{{ ansible_user }}/.bashrc"
-    regexp: '\.\s+<\(k3s completion bash\)'
+    regexp: "\\.\\s+<\\(k3s completion bash\\)"
     line: ". <(k3s completion bash)  # Added by k3s-ansible"
 
 - name: Setup optional config file
-  when: server_config_yaml is defined
+  when: k3s_server_config_yaml is defined
   block:
     - name: Make config directory
       ansible.builtin.file:
@@ -75,7 +79,7 @@
         state: directory
     - name: Copy config values
       ansible.builtin.copy:
-        content: "{{ server_config_yaml }}"
+        content: "{{ k3s_server_config_yaml }}"
         dest: "/etc/rancher/k3s/config.yaml"
         mode: "0644"
       register: _server_config_result
@@ -94,7 +98,7 @@
         state: touch
         mode: "0644"
       changed_when: false
-      
+
     - name: Create K3s data directory
       ansible.builtin.file:
         path: "/var/lib/rancher/k3s"
@@ -111,7 +115,7 @@
         group: root
         mode: "0644"
       register: service_file_single
-      
+
     - name: Create empty service env file if it doesn't exist yet
       ansible.builtin.file:
         path: "{{ systemd_dir | default('/etc/systemd/system') }}/k3s.service.env"
@@ -168,13 +172,16 @@
       register: k3s_ready
 
     - name: Get Certs
-      ansible.builtin.shell: openssl x509 -in /var/lib/rancher/k3s/server/tls/serving-kube-apiserver.crt -text -noout | grep -A1 "Subject Alternative Name"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          openssl x509 -in /var/lib/rancher/k3s/server/tls/serving-kube-apiserver.crt -text -noout | grep -A1 "Subject Alternative Name"
       register: cert_hosts
       changed_when: false
       failed_when: false
 
     - name: Debug Certs
-      debug:
+      ansible.builtin.debug:
         msg: "{{ cert_hosts.stdout }}"
 
 - name: Check whether kubectl is installed on control node
@@ -194,9 +201,12 @@
     state: directory
     mode: "0750"
 
-
 - name: Apply K3S kubeconfig to control node
   when: kubectl_installed.rc == 0
+  vars:
+    cluster_context: "{{ hostname }}"
+    kubeconfig: "{{ kubeconfig_dir }}/{{ hostname }}"
+
   block:
     - name: Copy kubeconfig to control node
       ansible.builtin.fetch:
@@ -215,8 +225,10 @@
 
     # Add task to rename context
     - name: Change context name in kubeconfig on control node
-      ansible.builtin.shell: |
-        sed -i 's/: default/: {{ cluster_context }}/g' {{ kubeconfig }}
+      ansible.builtin.replace:
+        path: "{{ kubeconfig }}"
+        regexp: ": default"
+        replace: ": {{ cluster_context }}"
       delegate_to: 127.0.0.1
       become: false
 
@@ -232,10 +244,6 @@
       register: mv_result
       changed_when:
         - mv_result.rc == 0
-
-  vars:
-    cluster_context: "{{ hostnames[inventory_hostname]['hostname'] }}"
-    kubeconfig: "{{ kubeconfig_dir }}/{{ hostnames[inventory_hostname]['hostname'] }}"
 
 - name: Setup kubectl for user
   when: user_kubectl | default(true)
@@ -258,14 +266,14 @@
     - name: Configure default KUBECONFIG for user
       ansible.builtin.lineinfile:
         path: ~{{ ansible_user }}/.bashrc
-        regexp: 'export KUBECONFIG=~/.kube/config'
-        line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
+        regexp: "export KUBECONFIG=~/.kube/config"
+        line: "export KUBECONFIG=~/.kube/config # Added by k3s-ansible"
         state: present
 
     - name: Configure kubectl autocomplete
       ansible.builtin.lineinfile:
         path: ~{{ ansible_user }}/.bashrc
-        regexp: '\.\s+<\(kubectl completion bash\)'
+        regexp: "\\.\\s+<\\(kubectl completion bash\\)"
         line: ". <(kubectl completion bash)  # Added by k3s-ansible"
 
 - name: Setup kubectl for sudo
@@ -287,14 +295,14 @@
     - name: Configure default KUBECONFIG for user
       ansible.builtin.lineinfile:
         path: ~/.bashrc
-        regexp: 'export KUBECONFIG=~/.kube/config'
-        line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
+        regexp: "export KUBECONFIG=~/.kube/config"
+        line: "export KUBECONFIG=~/.kube/config # Added by k3s-ansible"
         state: present
 
     - name: Configure kubectl autocomplete
       ansible.builtin.lineinfile:
         path: ~/.bashrc
-        regexp: '\.\s+<\(kubectl completion bash\)'
+        regexp: "\\.\\s+<\\(kubectl completion bash\\)"
         line: ". <(kubectl completion bash)  # Added by k3s-ansible"
 
 - name: Verify single node k3s status

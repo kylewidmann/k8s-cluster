@@ -6,37 +6,37 @@
     msg: "Minimum ansible-core version required is 2.14"
 
 - name: Update apt cache
-  apt:
-    update_cache: yes
+  ansible.builtin.apt:
+    update_cache: true
     cache_valid_time: 3600
   when: ansible_os_family == "Debian"
 
 - name: Install system packages
-  package:
+  ansible.builtin.package:
     name: "{{ system_packages }}"
     state: present
 
 - name: Install Dependent Ubuntu Packages
   when: ansible_distribution in ['Ubuntu']
   ansible.builtin.apt:
-    name: policycoreutils  # Used by install script to restore SELinux context
+    name: policycoreutils # Used by install script to restore SELinux context
     update_cache: true
 
 - name: Set timezone
-  timezone:
+  community.general.timezone:
     name: "{{ timezone }}"
 
 - name: Disable swap
   block:
     - name: Disable swap - command
-      command: swapoff -a
+      ansible.builtin.command: swapoff -a
       when: swap_disable
-      
+
     - name: Disable swap - fstab
-      replace:
+      ansible.builtin.replace:
         path: /etc/fstab
-        regexp: '^([^#].*\sswap\s+.*)$'
-        replace: '# \1'
+        regexp: "^([^#].*\\sswap\\s+.*)$"
+        replace: "# \\1"
       when: swap_disable
 
 - name: Populate service facts
@@ -89,7 +89,7 @@
         - ufw_status['stdout'] == "Status':' active"
       community.general.ufw:
         rule: allow
-        src: '{{ item }}'
+        src: "{{ item }}"
         comment: "Kubernetes networks"
       loop: "{{ ((cluster_cidr | default('10.42.0.0/16')) + ',' + (service_cidr | default('10.43.0.0/16'))) | split(',') }}"
 
@@ -123,8 +123,8 @@
         permanent: true
         immediate: true
       with_items:
-        - "32000"  # Karmada API Server
-        - "2379"   # etcd client
+        - "32000" # Karmada API Server
+        - "2379" # etcd client
 
     - name: Allow pod and service networks
       ansible.posix.firewalld:
@@ -145,15 +145,15 @@
 
 # Configure sysctl for Kubernetes
 - name: Configure sysctl for Kubernetes
-  sysctl:
+  ansible.posix.sysctl:
     name: "{{ item.name }}"
     value: "{{ item.value }}"
     state: present
-    reload: yes
+    reload: true
   with_items:
-    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
-    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
-    - { name: 'net.ipv4.ip_forward', value: '1' }
+    - { name: "net.bridge.bridge-nf-call-iptables", value: "1" }
+    - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+    - { name: "net.ipv4.ip_forward", value: "1" }
   ignore_errors: true
 
 # Fix for 'br_netfilter not found' errors
@@ -175,14 +175,18 @@
   block:
     - name: Attempt to load module using modprobe directly
       ansible.builtin.command: modprobe br_netfilter
-      ignore_errors: true
-      
+      register: modprobe_result
+      failed_when:
+        - modprobe_result.rc != 0
+        - "'Module br_netfilter not found' not in modprobe_result.stderr"
+        - "'Module already loaded' not in modprobe_result.stderr"
+
     - name: Verify br_netfilter status
       ansible.builtin.command: lsmod | grep br_netfilter
       register: br_module_check
       ignore_errors: true
       changed_when: false
-      
+
     - name: Display warning if module still not loaded
       when: br_module_check is failed
       ansible.builtin.debug:
@@ -193,15 +197,19 @@
   community.general.modprobe:
     name: overlay
     state: present
-  ignore_errors: true
+  failed_when:
+    - overlay_result.failed is defined
+    - overlay_result.failed
+    - "'Not found in directory' not in overlay_result.msg"
+    - "'Dependency failed' not in overlay_result.msg"
 
 - name: Ensure modules load at boot
-  copy:
+  ansible.builtin.copy:
     content: |
       br_netfilter
       overlay
     dest: /etc/modules-load.d/kubernetes.conf
-    mode: '0644'
+    mode: "0644"
 
 # AppArmor configuration
 - name: Check for Apparmor existence
@@ -239,7 +247,7 @@
     manager: auto
 
 # Iptables check for K3s compatibility
-- name: If iptables v1.8.0-1.8.4, warn user  # noqa ignore-errors
+- name: If iptables v1.8.0-1.8.4, warn user # noqa ignore-errors
   when:
     - ansible_facts.packages['iptables'] is defined
     - ansible_facts.packages['iptables'][0]['version'] is version('1.8.5', '<')
@@ -252,12 +260,12 @@
 
 - name: Add /usr/local/bin to sudo secure_path
   ansible.builtin.lineinfile:
-    line: 'Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin'
+    line: "Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin"
     regexp: "Defaults(\\s)*secure_path(\\s)*="
     state: present
     insertafter: EOF
     path: /etc/sudoers
-    validate: 'visudo -cf %s'
+    validate: "visudo -cf %s"
   when: ansible_os_family == 'RedHat'
 
 # Setup alternative K3s directory if specified
@@ -302,7 +310,7 @@
 #         path: /etc/systemd/system/k3s.service.d
 #         state: directory
 #         mode: '0755'
-      
+
 #     - name: Add security-related systemd drop-in
 #       ansible.builtin.copy:
 #         dest: /etc/systemd/system/k3s.service.d/10-security.conf
@@ -316,7 +324,7 @@
 #           NoNewPrivileges=true
 #         mode: '0644'
 #       register: security_drop_in
-      
+
 #     - name: Reload systemd if drop-in was added
 #       ansible.builtin.systemd:
 #         daemon_reload: yes

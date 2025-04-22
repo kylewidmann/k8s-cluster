@@ -1,3 +1,4 @@
+---
 # Karmada version
 karmada_chart_version: "v1.13.0"
 karmada_version: v1.13.1
@@ -7,10 +8,10 @@ karmada_chart_repo: "https://raw.githubusercontent.com/karmada-io/karmada/master
 karmada_namespace: "karmada-system"
 
 # Helm version
-helm_version: "v3.11.3"
+karmada_helm_version: "v3.11.3"
 
 # kubectl-karmada version
-kubectl_karmada_version: "{{ karmada_version }}"
+karmada_kubectl_version: "{{ karmada_version }}"
 
 # Karmada configurations
 karmada_install_mode: "host"
@@ -19,7 +20,7 @@ karmada_api_server_node_port: 32443
 karmada_api_secure_port: 5443
 
 # Temp directory for kubeconfigs
-kubeconfig_temp_dir: "/tmp/karmada-kubeconfigs"
+karmada_kubeconfig_temp_dir: "/tmp/karmada-kubeconfigs"
 
 # Networking
 karmada_apiserver_bind_address: "0.0.0.0"

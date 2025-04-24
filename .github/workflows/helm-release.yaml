@@ -1,0 +1,70 @@
+name: Release Charts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.0
+
+      - name: Create charts directory for packages
+        run: mkdir -p .deploy
+
+      - name: Package charts
+        run: |
+          for chart in charts/*; do
+            if [ -d "$chart" ]; then
+              echo "Packaging $chart"
+              helm package "$chart" -d .deploy
+            fi
+          done
+
+      - name: Create/Update index
+        run: |
+          if [ -f index.yaml ]; then
+            helm repo index .deploy --merge index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          else
+            helm repo index .deploy --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          fi
+          mv .deploy/* .
+          rm -rf .deploy
+
+      - name: Setup GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+      - name: Commit and push changes
+        run: |
+          git add .
+          git commit -m "Update Helm repository" || exit 0
+          git push

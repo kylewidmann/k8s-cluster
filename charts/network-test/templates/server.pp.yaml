@@ -1,0 +1,36 @@
+{{ if .Values.propagationPolicies.create }}
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+
+metadata:
+  name: '{{ include "network-test.fullname" . }}-server'
+  namespace: {{ $.Release.Namespace }}
+spec:
+  resourceSelectors:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: '{{ include "network-test.fullname" . }}-server'
+  placement:
+    clusterAffinity:
+      clusterNames: []  # Empty array means propagate to all registered clusters
+    replicaScheduling:
+      replicaSchedulingType: Duplicated  # Alternative: Duplicated
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+
+metadata:
+  name: {{ include "network-test.fullname" . }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  resourceSelectors:
+    - apiVersion: v1
+      kind: Service
+      name: {{ include "network-test.fullname" . }}
+  placement:
+    clusterAffinity:
+      clusterNames: []  # Empty array means propagate to all registered clusters
+    replicaScheduling:
+      replicaSchedulingType: Duplicated  # Alternative: Duplicated
+{{- end }}

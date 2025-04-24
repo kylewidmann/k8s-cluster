@@ -1,0 +1,22 @@
+{{ if .Values.propagationPolicies.create }}
+{{- $fullName := include "network-test.fullname" . -}}
+{{- range $test := .Values.tests }}
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+
+metadata:
+  name: {{ printf "%s-%s" $fullName $test.name | lower | replace "_" "-" }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  resourceSelectors:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: {{ printf "%s-%s" $fullName $test.name | lower | replace "_" "-" }}
+  placement:
+    clusterAffinity:
+      clusterNames: []
+    replicaScheduling:
+      replicaSchedulingType: Duplicated  # Alternative: Duplicated
+{{- end }}
+{{- end }}

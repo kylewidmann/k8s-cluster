@@ -36,6 +36,8 @@ config:
 tests: []
   # - name: test
   #   command: "command args..."
+propagationPolicies:
+  create: false
 server:
   port: 8080
   podAnnotations: {}

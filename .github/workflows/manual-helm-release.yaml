@@ -99,6 +99,121 @@ jobs:
             fi
           fi
 
+      - name: Dynamically add Helm repositories
+        run: |
+          # Create a temporary file to track added repositories
+          touch added_repos.txt
+          
+          # Function to add repository if not already added
+          add_repo_if_needed() {
+            local repo_name=$1
+            local repo_url=$2
+            
+            # Skip if repository URL is @ or file:// or empty
+            if [[ "$repo_url" == "@"* || "$repo_url" == "file://"* || -z "$repo_url" ]]; then
+              echo "Skipping local repository: $repo_url"
+              return
+            fi
+            
+            # Extract repository name from URL or use provided name
+            local effective_repo_name="$repo_name"
+            if [ -z "$effective_repo_name" ]; then
+              effective_repo_name=$(echo "$repo_url" | sed -E 's|^https?://||g' | sed -E 's|/.*$||g' | sed -E 's|\.[^.]*\.[^.]*$||g' | sed -E 's|\.[^.]*$||g')
+            fi
+            
+            # Ensure we have a valid name
+            if [ -z "$effective_repo_name" ]; then
+              effective_repo_name="repo-$(date +%s%N | md5sum | head -c 8)"
+            fi
+            
+            if ! grep -q "^$effective_repo_name|$repo_url$" added_repos.txt; then
+              echo "Adding repository: $effective_repo_name ($repo_url)"
+              helm repo add "$effective_repo_name" "$repo_url"
+              echo "$effective_repo_name|$repo_url" >> added_repos.txt
+            fi
+          }
+          
+          # Process repositories from chart dependencies
+          process_chart_dependencies() {
+            local chart_path=$1
+            
+            if [ -f "$chart_path/Chart.yaml" ]; then
+              echo "Processing dependencies for $(basename $chart_path)"
+              
+              # Check if the chart has dependencies
+              if yq e '.dependencies' "$chart_path/Chart.yaml" | grep -q -v "null"; then
+                # Extract all dependencies
+                count=$(yq e '.dependencies | length' "$chart_path/Chart.yaml")
+                
+                # Process each dependency
+                for i in $(seq 0 $((count-1))); do
+                  name=$(yq e ".dependencies[$i].name" "$chart_path/Chart.yaml")
+                  repo=$(yq e ".dependencies[$i].repository" "$chart_path/Chart.yaml")
+                  
+                  # Derive repo name from the name field if it contains a slash
+                  repo_name=""
+                  if [[ "$name" == *"/"* ]]; then
+                    repo_name=$(echo "$name" | cut -d'/' -f1)
+                  fi
+                  
+                  # Add the repository
+                  add_repo_if_needed "$repo_name" "$repo"
+                done
+              else
+                echo "No dependencies found in $chart_path/Chart.yaml"
+              fi
+            fi
+          }
+          
+          # Process dependencies for all charts
+          if [ -n "${{ github.event.inputs.chart }}" ]; then
+            # Process specific chart
+            process_chart_dependencies ".deploy/${{ github.event.inputs.chart }}"
+          else
+            # Process all charts
+            for chart in .deploy/*; do
+              if [ -d "$chart" ]; then
+                process_chart_dependencies "$chart"
+              fi
+            done
+          fi
+          
+          # Update all repositories
+          helm repo update
+          
+          # List all repositories
+          echo "Current repositories:"
+          helm repo list
+
+      - name: Update Helm dependencies
+        run: |
+          if [ -n "${{ github.event.inputs.chart }}" ]; then
+            # Update dependencies for specific chart
+            chart_path=".deploy/${{ github.event.inputs.chart }}"
+            if [ -d "$chart_path" ] && [ -f "$chart_path/Chart.yaml" ]; then
+              echo "Updating dependencies for $chart_path"
+              helm dependency update "$chart_path"
+              # List dependencies to verify
+              if [ -d "$chart_path/charts" ]; then
+                echo "Dependencies downloaded:"
+                ls -la "$chart_path/charts"
+              fi
+            fi
+          else
+            # Update dependencies for all charts
+            for chart in .deploy/*; do
+              if [ -d "$chart" ] && [ -f "$chart/Chart.yaml" ]; then
+                echo "Updating dependencies for $chart"
+                helm dependency update "$chart"
+                # List dependencies to verify
+                if [ -d "$chart/charts" ]; then
+                  echo "Dependencies downloaded for $(basename $chart):"
+                  ls -la "$chart/charts"
+                fi
+              fi
+            done
+          fi
+
       - name: Package charts
         run: |
           for chart in .deploy/*; do

@@ -11,6 +11,50 @@ image:
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
+
+prometheus:
+  deploy: true
+  karmadaToken: REPLACEME
+  federation:
+    enabled: false
+    scrapeInterval: '15s'
+    matchSelectors:
+    - '{job="kubernetes-pods"}'
+    - '{job="kubernetes-nodes-cadvisor"}'
+    - '{job="node-exporter"}'
+    clusters: []
+    # - endpoint: 10.0.0.1:30090 
+    #   name: cluster1
+    #   auth:
+    #     enabled: false
+    #     scheme: https
+    #     tokenFile: ''
+    #     caFile: ''
+    #     insecureSkipVerify: ''
+
+
+  serviceAccount:
+    createSecret: false
+  service:
+    nodePort: 30090
+  scrape:
+    scrapePrometheus: true
+    scrapePods: true
+    scrapeNodes: true
+    scrapeKarmada: false
+    customScrapeConfigs: []
+    additionalConfigs: []
+  propagationPolicies:
+    create: false
+  networkPolicies:
+    create: false
+    allowedCIDRs: []
+
+grafana:
+  deploy: true
+  propagationPolicies:
+    create: false
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true

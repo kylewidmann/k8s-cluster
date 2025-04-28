@@ -10,4 +10,5 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 9090
-  type: LoadBalancer
+      nodePort: {{ .Values.prometheus.service.nodePort}}
+  type: NodePort

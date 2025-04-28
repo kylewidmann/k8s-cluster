@@ -69,3 +69,14 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: "{{ .Release.Namespace }}"
+---
+{{ if .Values.prometheus.serviceAccount.createSecret }}
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: prometheus
+  namespace: "{{ .Release.Namespace }}"
+  annotations:
+    kubernetes.io/service-account.name: "prometheus"
+{{- end }}

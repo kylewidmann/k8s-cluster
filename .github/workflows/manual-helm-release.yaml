@@ -1,0 +1,125 @@
+name: Manual Release Charts
+
+on:
+  workflow_dispatch:
+    inputs:
+      chart:
+        description: 'Chart to release (leave empty for all)'
+        required: false
+        default: ''
+      branch:
+        description: 'Branch to build from'
+        required: false
+        default: 'main'
+      prerelease_suffix:
+        description: 'Prerelease suffix (e.g., alpha.1, beta.2, rc.1)'
+        required: false
+        default: 'dev'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.0
+
+      - name: Install yq for YAML processing
+        run: |
+          sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.35.1/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Create charts directory for packages
+        run: mkdir -p .deploy
+
+      - name: Process charts (auto dev version for non-main branches)
+        run: |
+          # Auto dev version if not on main branch
+          if [ "${{ github.event.inputs.branch }}" != "main" ]; then
+            echo "Building from non-main branch, creating dev versions"
+            if [ -n "${{ github.event.inputs.chart }}" ]; then
+              # Process specific chart
+              chart_path="charts/${{ github.event.inputs.chart }}"
+              if [ -d "$chart_path" ]; then
+                cp -r "$chart_path" ".deploy/${{ github.event.inputs.chart }}"
+                current_version=$(yq e '.version' "$chart_path/Chart.yaml")
+                
+                # Append prerelease suffix and build number
+                dev_version="${current_version}-${{ github.event.inputs.prerelease_suffix }}+${{ github.run_number }}"
+                
+                yq e -i ".version = \"$dev_version\"" ".deploy/${{ github.event.inputs.chart }}/Chart.yaml"
+                echo "Updated ${{ github.event.inputs.chart }} version to $dev_version"
+              fi
+            else
+              # Process all charts
+              for chart in charts/*; do
+                if [ -d "$chart" ]; then
+                  chart_name=$(basename "$chart")
+                  cp -r "$chart" ".deploy/$chart_name"
+                  current_version=$(yq e '.version' "$chart/Chart.yaml")
+                  
+                  # Append prerelease suffix and build number
+                  dev_version="${current_version}-${{ github.event.inputs.prerelease_suffix }}+${{ github.run_number }}"
+                  
+                  yq e -i ".version = \"$dev_version\"" ".deploy/$chart_name/Chart.yaml"
+                  echo "Updated $chart_name version to $dev_version"
+                fi
+              done
+            fi
+          else
+            echo "Building from main branch, using production versions"
+            # Copy charts without version modification
+            if [ -n "${{ github.event.inputs.chart }}" ]; then
+              cp -r "charts/${{ github.event.inputs.chart }}" ".deploy/"
+            else
+              cp -r charts/* .deploy/
+            fi
+          fi
+
+      - name: Package charts
+        run: |
+          for chart in .deploy/*; do
+            if [ -d "$chart" ]; then
+              echo "Packaging $chart"
+              helm package "$chart" -d .
+            fi
+          done
+          rm -rf .deploy
+
+      - name: Create/Update index
+        run: |
+          if [ -f index.yaml ]; then
+            helm repo index . --merge index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          else
+            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          fi
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+      - name: Commit and push changes
+        run: |
+          git add *.tgz index.yaml
+          git commit -m "Release charts from branch ${{ github.event.inputs.branch }}" || exit 0
+          git push origin HEAD:main

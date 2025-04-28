@@ -8,3 +8,4 @@ values
 **/inventory.yml
 !**/templates/inventory.yml
 **/group_vars/all/hostnames.yml
+charts/*/charts/**

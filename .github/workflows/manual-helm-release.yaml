@@ -224,6 +224,21 @@ jobs:
           done
           rm -rf .deploy
 
+      - name: Fetch main branch for index update
+        if: github.event.inputs.branch == 'main'
+        run: |
+          # Save the current packaged files
+          mkdir -p temp_storage
+          cp *.tgz temp_storage/ 2>/dev/null || true
+          
+          # Get latest main branch with index.yaml
+          git fetch origin main
+          git checkout origin/main -- index.yaml || true
+          
+          # Move saved files back
+          cp temp_storage/*.tgz . 2>/dev/null || true
+          rm -rf temp_storage
+
       - name: Create/Update index
         run: |
           if [ -f index.yaml ]; then
@@ -244,8 +259,11 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Commit and push changes
-        run: |
-          git add *.tgz index.yaml
-          git commit -m "Release charts from branch ${{ github.event.inputs.branch }}" || exit 0
-          git push origin HEAD:main
+      # Only commit and push if we're on the main branch
+      - name: Commit and push changes to main
+        if: github.event.inputs.branch == 'main'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Release production charts"
+          file_pattern: "*.tgz index.yaml"
+          branch: main

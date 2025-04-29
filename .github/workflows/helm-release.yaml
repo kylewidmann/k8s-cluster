@@ -42,9 +42,6 @@ jobs:
           sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.35.1/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-      - name: Create charts directory for packages
-        run: |
-          mkdir -p .deploy/repo
 
       - name: Dynamically add Helm repositories
         run: |
@@ -145,23 +142,23 @@ jobs:
           for chart in charts/*; do
             if [ -d "$chart" ]; then
               echo "Packaging $chart"
-              helm package "$chart" -d .deploy/repo
+              helm package "$chart" -d .deploy
             fi
           done
 
       - name: Fetch existing index file
         run: |
           # Try to get existing index.yaml if it exists
-          curl -s -f -o existing_index.yaml https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/index.yaml || true
+          curl -s -f -o existing_index.yaml https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.yaml || true
 
       - name: Create/Update index
         run: |
           if [ -f "existing_index.yaml" ]; then
             echo "Using existing index.yaml for merging"
-            helm repo index .deploy/repo --merge existing_index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/
+            helm repo index .deploy --merge existing_index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           else
             echo "Creating new index.yaml"
-            helm repo index .deploy/repo --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/
+            helm repo index .deploy --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           fi
           rm -f existing_index.yaml
 

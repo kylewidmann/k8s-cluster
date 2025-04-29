@@ -223,16 +223,16 @@ jobs:
       - name: Fetch existing index file
         run: |
           # Try to get existing index.yaml if it exists
-          curl -s -f -o existing_index.yaml https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/index.yaml || true
+          curl -s -f -o existing_index.yaml https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.yaml || true
 
       - name: Create/Update index
         run: |
           if [ -f "existing_index.yaml" ]; then
             echo "Using existing index.yaml for merging"
-            helm repo index .deploy --merge existing_index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/
+            helm repo index .deploy --merge existing_index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           else
             echo "Creating new index.yaml"
-            helm repo index .deploy --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/
+            helm repo index .deploy --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           fi
           rm -f existing_index.yaml
 

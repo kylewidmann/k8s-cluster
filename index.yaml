@@ -1,0 +1,32 @@
+apiVersion: v1
+entries:
+  monitoring:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2025-04-29T00:10:34.837235152Z"
+    dependencies:
+    - name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 8.11.3
+    - name: prometheus-node-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 4.45.2
+    description: A Helm chart for Kubernetes
+    digest: 3ee3c28d28d5f9f63f6f9138756bb62395c860ab369732916463512680098225
+    name: monitoring
+    type: application
+    urls:
+    - https://kylewidmann.github.io/k8s-cluster/monitoring-0.1.0.tgz
+    version: 0.1.0
+  network-test:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2025-04-29T00:10:34.837792629Z"
+    description: A Helm chart for Kubernetes
+    digest: 3e8acd7a19006147d6334ee749c65bfd1f5f01bc92fb525a20355d96205933c2
+    name: network-test
+    type: application
+    urls:
+    - https://kylewidmann.github.io/k8s-cluster/network-test-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-04-29T00:10:34.830913195Z"

@@ -51,6 +51,10 @@ jobs:
         run: |
           sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.35.1/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
+      
+      - name: Create charts directory for packages
+        run: |
+           mkdir -p .deploy
 
       - name: Process charts (auto dev version for non-main branches)
         run: |

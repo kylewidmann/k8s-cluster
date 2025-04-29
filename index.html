@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Helm Chart Repository</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #326de6;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #326de6;
+      margin-top: 30px;
+    }
+    code {
+      background-color: #f4f4f4;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      border: 1px solid #ddd;
+    }
+    .chart-list {
+      margin-top: 20px;
+    }
+    .chart-item {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      border-left: 4px solid #326de6;
+    }
+    .chart-item h3 {
+      margin-top: 0;
+    }
+    a {
+      color: #0366d6;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    footer {
+      margin-top: 40px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+      font-size: 0.9em;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <h1>Helm Chart Repository</h1>
+  <p>This is a Helm chart repository hosted on GitHub Pages for Kubernetes deployment manifests.</p>
+  
+  <h2>Usage</h2>
+  <p>To use this repository with Helm:</p>
+  <pre><code>helm repo add k8s-cluster https://kylewidmann.github.io/k8s-cluster/repo
+helm repo update</code></pre>
+  
+  <p>Then you can see the available charts:</p>
+  <pre><code>helm search repo k8s-cluster</code></pre>
+  
+  <p>And install a chart:</p>
+  <pre><code>helm install my-release k8s-cluster/CHART_NAME</code></pre>
+  
+  <h2>Available Charts</h2>
+  <div class="chart-list">
+    <div class="chart-item">
+      <h3>monitoring</h3>
+      <p>Monitoring stack for Kubernetes using Prometheus, Grafana, and other tools.</p>
+      <pre><code>helm install monitoring k8s-cluster/monitoring</code></pre>
+    </div>
+    <!-- Add more chart items as needed -->
+  </div>
+  
+  <h2>Repository</h2>
+  <p>The index file is available at <a href="./repo/index.yaml">index.yaml</a>.</p>
+  <p>Source code is available on <a href="https://github.com/kylewidmann/k8s-cluster">GitHub</a>.</p>
+  
+  <footer>
+    Last updated: <span id="updated-date">April 29, 2025</span>
+    <script>
+      document.getElementById('updated-date').innerText = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    </script>
+  </footer>
+</body>
+</html>

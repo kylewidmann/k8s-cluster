@@ -53,7 +53,8 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
 
       - name: Create charts directory for packages
-        run: mkdir -p .deploy
+        run: |
+          mkdir -p .deploy/repo
 
       - name: Process charts (auto dev version for non-main branches)
         run: |
@@ -165,7 +166,7 @@ jobs:
             fi
           }
           
-          # Process dependencies for all charts
+          # Process dependencies for charts in deploy directory
           if [ -n "${{ github.event.inputs.chart }}" ]; then
             # Process specific chart
             process_chart_dependencies ".deploy/${{ github.event.inputs.chart }}"
@@ -219,33 +220,34 @@ jobs:
           for chart in .deploy/*; do
             if [ -d "$chart" ]; then
               echo "Packaging $chart"
-              helm package "$chart" -d .
+              helm package "$chart" -d .deploy/repo
             fi
           done
-          rm -rf .deploy
 
-      - name: Fetch main branch for index update
-        if: github.event.inputs.branch == 'main'
+      - name: Fetch existing index file
         run: |
-          # Save the current packaged files
-          mkdir -p temp_storage
-          cp *.tgz temp_storage/ 2>/dev/null || true
-          
-          # Get latest main branch with index.yaml
-          git fetch origin main
-          git checkout origin/main -- index.yaml || true
-          
-          # Move saved files back
-          cp temp_storage/*.tgz . 2>/dev/null || true
-          rm -rf temp_storage
+          # Try to get existing index.yaml if it exists
+          curl -s -f -o existing_index.yaml https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/index.yaml || true
 
       - name: Create/Update index
         run: |
-          if [ -f index.yaml ]; then
-            helm repo index . --merge index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          if [ -f "existing_index.yaml" ]; then
+            echo "Using existing index.yaml for merging"
+            helm repo index .deploy/repo --merge existing_index.yaml --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/
           else
-            helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+            echo "Creating new index.yaml"
+            helm repo index .deploy/repo --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo/
           fi
+          rm -f existing_index.yaml
+
+      # Copy the landing page from the repository
+      - name: Copy landing page
+        run: |
+          # Copy the index.html file from the repository
+          cp index.html .deploy/
+          
+          # Create .nojekyll file to prevent GitHub Pages from processing with Jekyll
+          touch .deploy/.nojekyll
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
@@ -253,17 +255,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: .deploy
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      # Only commit and push if we're on the main branch
-      - name: Commit and push changes to main
-        if: github.event.inputs.branch == 'main'
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Release production charts"
-          file_pattern: "*.tgz index.yaml"
-          branch: main

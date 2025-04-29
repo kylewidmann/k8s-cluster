@@ -55,6 +55,7 @@ jobs:
       - name: Create charts directory for packages
         run: |
           mkdir -p .deploy/repo
+          mkdir -p .deploy/repo/charts
 
       - name: Process charts (auto dev version for non-main branches)
         run: |

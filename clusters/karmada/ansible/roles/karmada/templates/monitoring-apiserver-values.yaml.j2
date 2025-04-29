@@ -1,0 +1,13 @@
+---
+grafana:
+  deploy: false
+
+prometheus:
+  serviceAccount:
+    createSecret: true
+  propagationPolicies:
+    create: true
+  networkPolicies:
+    create: true
+    allowedCIDRs:
+      - "{{ ansible_host }}"

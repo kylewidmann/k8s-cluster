@@ -119,18 +119,6 @@ jobs:
             fi
           done
           
-          # Add any common/known repositories that might not be in dependencies but are needed
-          common_repos=(
-            "grafana|https://grafana.github.io/helm-charts"
-            "prometheus-community|https://prometheus-community.github.io/helm-charts"
-            "karmada-charts|https://raw.githubusercontent.com/karmada-io/karmada/master/charts"
-          )
-          
-          for repo_data in "${common_repos[@]}"; do
-            IFS="|" read -r name url <<< "$repo_data"
-            add_repo_if_needed "$name" "$url"
-          done
-          
           # Update all repositories
           helm repo update
           

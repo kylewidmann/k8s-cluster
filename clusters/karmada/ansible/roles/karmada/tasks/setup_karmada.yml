@@ -88,11 +88,23 @@
   register: karmada_kubeconfig
   changed_when: false
 
-- name: Save Karmada kubeconfig to file
-  ansible.builtin.copy:
-    content: '{{ karmada_kubeconfig.stdout }}'
-    dest: '{{ karmada_kubeconfig_temp_dir }}/karmada-kubeconfig'
-    mode: '0600'
+- name: Setup Karmada API kubeconfig
+  vars:
+    kubeconfig: '{{ karmada_kubeconfig_temp_dir }}/karmada-apiserver'
+  block:
+    - name: Save Karmada kubeconfig to file
+      ansible.builtin.copy:
+        content: '{{ karmada_kubeconfig.stdout }}'
+        dest: '{{ kubeconfig }}'
+        mode: '0600'
+
+    - name: Change server address in kubeconfig for API server
+      ansible.builtin.shell: |
+        KUBECONFIG={{ kubeconfig }} kubectl config set-cluster karmada-apiserver --server=https://127.0.0.1:{{ karmada_api_server_node_port }}
+      register: csa_result
+      changed_when:
+        - csa_result.rc == 0
+
 
 - name: Check whether kubectl is installed on control node
   delegate_to: 127.0.0.1

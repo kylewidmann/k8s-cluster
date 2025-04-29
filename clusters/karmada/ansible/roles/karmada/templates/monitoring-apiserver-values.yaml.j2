@@ -10,4 +10,4 @@ prometheus:
   networkPolicies:
     create: true
     allowedCIDRs:
-      - "{{ ansible_host }}"
+      - "{{ ansible_host }}/32"

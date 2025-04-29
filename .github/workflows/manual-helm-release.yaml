@@ -245,8 +245,6 @@ jobs:
       - name: Copy landing page
         run: |
           # Copy the index.html file from the repository
-          pwd
-          ls -al
           cp index.html .deploy/
           
           # Create .nojekyll file to prevent GitHub Pages from processing with Jekyll

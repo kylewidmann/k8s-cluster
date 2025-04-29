@@ -68,7 +68,7 @@
   
   <h2>Usage</h2>
   <p>To use this repository with Helm:</p>
-  <pre><code>helm repo add k8s-cluster https://kylewidmann.github.io/k8s-cluster/repo
+  <pre><code>helm repo add k8s-cluster https://kylewidmann.github.io/k8s-cluster/
 helm repo update</code></pre>
   
   <p>Then you can see the available charts:</p>
@@ -85,10 +85,15 @@ helm repo update</code></pre>
       <pre><code>helm install monitoring k8s-cluster/monitoring</code></pre>
     </div>
     <!-- Add more chart items as needed -->
+    <div class="chart-item">
+      <h3>network-test</h3>
+      <p>Provides tools to product metrics for HTTP and TCP networking benchmarks.</p>
+      <pre><code>helm install network-test k8s-cluster/network-test</code></pre>
+    </div>
   </div>
   
   <h2>Repository</h2>
-  <p>The index file is available at <a href="./repo/index.yaml">index.yaml</a>.</p>
+  <p>The index file is available at <a href="./index.yaml">index.yaml</a>.</p>
   <p>Source code is available on <a href="https://github.com/kylewidmann/k8s-cluster">GitHub</a>.</p>
   
   <footer>

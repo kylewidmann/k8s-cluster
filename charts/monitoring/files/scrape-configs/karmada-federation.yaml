@@ -1,4 +1,3 @@
-{{- if .Values.prometheus.federation.enabled }}
 # Federation jobs configuration
 {{- range $cluster := .Values.prometheus.federation.clusters }}
 - job_name: 'federate-{{ $cluster.name }}'
@@ -27,5 +26,4 @@
       - '{{ $cluster.endpoint }}'
       labels:
         cluster: '{{ $cluster.name }}'
-{{- end }}
 {{- end }}

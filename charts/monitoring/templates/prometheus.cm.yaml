@@ -23,6 +23,8 @@ data:
 {{- if .Values.prometheus.scrape.scrapeKarmada }}
 {{- $karmadaTemplate := .Files.Get "files/scrape-configs/karmada.yaml" }}
 {{ tpl $karmadaTemplate . | indent 6 }}
+{{- end }}
+{{- if .Values.prometheus.federation.enabled }}
 {{- $karmadaFederationTemplate := .Files.Get "files/scrape-configs/karmada-federation.yaml" }}
 {{ tpl $karmadaFederationTemplate . | indent 6 }}
 {{- end }}

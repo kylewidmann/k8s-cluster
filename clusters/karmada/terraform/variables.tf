@@ -60,6 +60,7 @@ variable "instances" {
     count         = number
     ami           = string
     instance_type = string
+    volume_size   = number
     user_data     = string
     tags          = map(string)
   }))
@@ -68,6 +69,7 @@ variable "instances" {
       count         = 0
       ami           = ""
       instance_type = ""
+      volume_size   = 8
       user_data     = ""
       tags          = {}
     }

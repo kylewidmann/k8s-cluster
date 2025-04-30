@@ -36,7 +36,7 @@ prometheus:
   serviceAccount:
     createSecret: false
   service:
-    nodePort: 30090
+    type: ClusterIP
   scrape:
     scrapePrometheus: true
     scrapePods: true
@@ -54,6 +54,7 @@ grafana:
   deploy: true
   propagationPolicies:
     create: false
+  
 
 serviceAccount:
   # Specifies whether a service account should be created

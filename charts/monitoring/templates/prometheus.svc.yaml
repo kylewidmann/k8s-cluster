@@ -10,5 +10,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 9090
+      {{- if (and (eq .Values.prometheus.service.type "NodePort") (not (empty .Values.prometheus.service.nodePort))) }}
+      nodePort: {{ .Values.prometheus.service.nodePort }}
+      {{- end }}
       nodePort: {{ .Values.prometheus.service.nodePort}}
-  type: NodePort
+  type: {{ .Values.prometheus.service.type}}

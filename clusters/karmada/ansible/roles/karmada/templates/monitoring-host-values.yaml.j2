@@ -2,7 +2,11 @@
 grafana:
   # Admin credentials
   adminUser: chutes
-  adminPassword: "{{ grafana_password }}"
+  adminPassword: "{{ karmada_grafana_password }}"
+
+  service:
+    type: NodePort
+    nodePort: 30080
 
   # Data sources configuration
   datasources:
@@ -40,6 +44,20 @@ grafana:
     default: grafana-dashboards
   
 prometheus:
+  service:
+    type: ClusterIP
   karmadaToken: "{{ api_server_token }}"
   scrape:
     scrapeKarmada: true
+  federation:
+    enabled: true
+    scrapeInterval: '15s'
+    matchSelectors:
+    - '{job="kubernetes-pods"}'
+    - '{job="kubernetes-nodes-cadvisor"}'
+    - '{job="node-exporter"}'
+    clusters:
+{% for host in groups['k3s_clusters'] %}
+    - endpoint: {{ host }}:30090
+      name: {{ hostvars[host]['ansible_facts']['hostname'] }}
+{% endfor %}

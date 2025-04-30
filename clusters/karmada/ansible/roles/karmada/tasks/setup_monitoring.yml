@@ -1,4 +1,9 @@
 ---
+- name: Set hostname for each host
+  ansible.builtin.set_fact:
+    hostname: '{{ item.hostname }}'
+  loop: '{{ host_mappings }}'
+  when: item.ip == inventory_hostname
 
 - name: Add monitoring Helm repository
   ansible.builtin.command: helm repo add k8s-cluster {{ karmada_monitoring_chart_repo }}

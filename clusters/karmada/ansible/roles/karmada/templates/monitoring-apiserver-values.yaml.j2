@@ -3,6 +3,9 @@ grafana:
   deploy: false
 
 prometheus:
+  service:
+    type: NodePort
+    nodePort: 30090
   serviceAccount:
     createSecret: true
   propagationPolicies:

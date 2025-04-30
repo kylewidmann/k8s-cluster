@@ -7,10 +7,9 @@
     mode: '0644'
   changed_when: false
 
-- name: Get public/external IP address
-  ansible.builtin.uri:
-    url: https://ifconfig.me
-    return_content: true
+- name: Get public/external IP address # noqa command-instead-of-module
+  ansible.builtin.shell: |
+    curl -s https://ifconfig.me
   register: public_ip
   changed_when: false
   ignore_errors: true

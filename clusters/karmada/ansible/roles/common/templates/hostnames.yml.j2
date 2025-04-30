@@ -1,0 +1,10 @@
+---
+host_mappings:
+{% for host in groups['karmada'] %}
+  - ip: "{{ host }}"
+    hostname: "karmada-host{% if groups['karmada'] | length > 1 %}{{ groups['karmada'].index(host) + 1 }}{% endif %}{{ '' }}"
+{% endfor %}
+{% for host in groups['k3s_clusters'] %}
+  - ip: "{{ host }}"
+    hostname: "cluster{{ groups['k3s_clusters'].index(host) + 1 }}"
+{% endfor %}

@@ -1,66 +1,78 @@
 ---
+
 - name: Update MicroK8s API server certificates to include host public IP
   hosts: control_plane
-  become: yes
-  
+  become: true
   tasks:
+
     - name: Set additional IP
-      set_fact:
-        additional_ip: "{{ ansible_host }}"
+      ansible.builtin.set_fact:
+        additional_ip: '{{ ansible_host }}'
 
     - name: Debug additional IP
-      debug:
-        msg: "{{ additional_ip }}"
+      ansible.builtin.debug:
+        msg: '{{ additional_ip }}'
 
     - name: Stop MicroK8s service
-      command: microk8s stop
+      ansible.builtin.command: microk8s stop
       register: stop_result
       failed_when: stop_result.rc != 0 and "not running" not in stop_result.stderr
-      
+      changed_when: stop_result = 0
+
     - name: Check if csr.conf.template exists
-      stat:
+      ansible.builtin.stat:
         path: /var/snap/microk8s/current/certs/csr.conf.template
       register: csr_conf_template
-      
+
     - name: Backup original csr.conf.template
-      copy:
+      ansible.builtin.copy:
         src: /var/snap/microk8s/current/certs/csr.conf.template
         dest: /var/snap/microk8s/current/certs/csr.conf.template.bak
-        remote_src: yes
+        remote_src: true
+        mode: '0644'
       when: csr_conf_template.stat.exists
-        
+
     # Update to not assume 2 existing IPs
+
     - name: Update csr.conf.template with additional IP
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /var/snap/microk8s/current/certs/csr.conf.template
-        line: "IP.3 = {{ additional_ip }}"
-        insertafter: "#MOREIPS"
+        line: IP.3 = {{ additional_ip }}
+        insertafter: '#MOREIPS'
         state: present
       when: csr_conf_template.stat.exists
       register: template_updated
-        
+
     - name: Refresh certificates after updating template
-      command: "microk8s refresh-certs --cert server.crt"
+      ansible.builtin.command: microk8s refresh-certs --cert server.crt
       when: csr_conf_template.stat.exists and template_updated.changed
-        
+      register: refresh_result
+      changed_when: refresh_result = 0
+
     - name: Start MicroK8s service
-      command: microk8s start
+      ansible.builtin.command: microk8s start
       register: start_result
       failed_when: start_result.rc != 0
-        
+      changed_when: start_result.rc = 0
+
     - name: Wait for MicroK8s to be ready
-      command: microk8s status --wait-ready
+      ansible.builtin.command: microk8s status --wait-ready
       register: status_result
       retries: 5
       delay: 10
       until: status_result.rc == 0
-      
+      changed_when: false
+
     - name: Verify the certificate now includes the additional IP
-      shell: "openssl x509 -in /var/snap/microk8s/current/certs/server.crt -text | grep -A1 'Subject Alternative Name' | grep -o '{{ additional_ip }}'"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          openssl x509 -in /var/snap/microk8s/current/certs/server.crt -text | grep -A1 'Subject Alternative Name' | grep -o '{{ additional_ip }}'
+        executable: /bin/bash
       register: verify_result
       failed_when: false
       changed_when: false
-      
+
     - name: Report certificate status
-      debug:
-        msg: "Certificate {{ 'includes' if verify_result.rc == 0 else 'does NOT include' }} the additional IP {{ additional_ip }}"
+      ansible.builtin.debug:
+        msg: Certificate {{ 'includes' if verify_result.rc == 0 else 'does NOT include' }} the additional IP {{ additional_ip }}

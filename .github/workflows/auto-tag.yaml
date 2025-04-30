@@ -1,8 +1,9 @@
+---
 name: Auto Tag Version
-
 on:
   workflow_run:
-    workflows: ["Docker Image CI/CD"]
+    workflows:
+      - Docker Image CI/CD
     types:
       - completed
     branches:
@@ -12,32 +13,30 @@ jobs:
   create-tag:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
-    
     permissions:
       contents: write
-      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: main
           fetch-depth: 0
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
+
       - name: Install tomli package
         run: pip install tomli
-      
+
       - name: Extract version from pyproject.toml
         id: version
         run: |
           VERSION=$(python -c "import tomli; print(tomli.loads(open('pyproject.toml', 'r').read())['project']['version'])")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-      
+
       - name: Check if tag exists
         id: check_tag
         run: |
@@ -48,10 +47,10 @@ jobs:
             echo "Tag v${{ steps.version.outputs.version }} does not exist"
             echo "tag_exists=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Create and push tag
         if: steps.check_tag.outputs.tag_exists == 'false'
-        run: |
+        run: |-
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release version ${{ steps.version.outputs.version }}"

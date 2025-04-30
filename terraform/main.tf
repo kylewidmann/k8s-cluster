@@ -42,6 +42,7 @@ module "ec2_instance" {
   vpc_security_group_ids = [module.security_group.security_group_id]
   subnet_id              = module.vpc.public_subnet_id
   user_data              = each.value.user_data
+  volume_size            = each.value.volume_size
 
   tags = merge(
     var.default_tags,

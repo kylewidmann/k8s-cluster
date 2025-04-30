@@ -10,4 +10,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 9090
-  type: LoadBalancer
+      {{- if (and (eq .Values.prometheus.service.type "NodePort") (not (empty .Values.prometheus.service.nodePort))) }}
+      nodePort: {{ .Values.prometheus.service.nodePort }}
+      {{- end }}
+      nodePort: {{ .Values.prometheus.service.nodePort}}
+  type: {{ .Values.prometheus.service.type}}

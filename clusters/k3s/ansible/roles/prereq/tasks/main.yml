@@ -1,9 +1,10 @@
 ---
+
 - name: Enforce minimum Ansible version
   ansible.builtin.assert:
     that:
       - ansible_version.full is version('2.14', '>=')
-    msg: "Minimum ansible-core version required is 2.14"
+    msg: Minimum ansible-core version required is 2.14
 
 - name: Install Dependent Ubuntu Packages
   when: ansible_distribution in ['Ubuntu']
@@ -14,14 +15,14 @@
 - name: Enable IPv4 forwarding
   ansible.posix.sysctl:
     name: net.ipv4.ip_forward
-    value: "1"
+    value: '1'
     state: present
     reload: true
 
 - name: Enable IPv6 forwarding
   ansible.posix.sysctl:
     name: net.ipv6.conf.all.forwarding
-    value: "1"
+    value: '1'
     state: present
     reload: true
   when: ansible_all_ipv6_addresses
@@ -34,6 +35,7 @@
     - ansible_facts.services['ufw'] is defined
     - ansible_facts.services['ufw'].state == 'running'
   block:
+
     - name: Get ufw status
       ansible.builtin.command:
         cmd: ufw status
@@ -45,7 +47,7 @@
         - ufw_status['stdout'] == "Status':' active"
       community.general.ufw:
         rule: allow
-        port: "{{ api_port }}"
+        port: '{{ api_port }}'
         proto: tcp
 
     - name: If ufw enabled, open etcd ports
@@ -54,7 +56,7 @@
         - groups[server_group] | length > 1
       community.general.ufw:
         rule: allow
-        port: "2379:2381"
+        port: 2379:2381
         proto: tcp
 
     - name: If ufw enabled, allow default CIDRs
@@ -70,9 +72,10 @@
     - ansible_facts.services['firewalld.service'] is defined
     - ansible_facts.services['firewalld.service'].state == 'running'
   block:
+
     - name: If firewalld enabled, open api port
       ansible.posix.firewalld:
-        port: "{{ api_port }}/tcp"
+        port: '{{ api_port }}/tcp'
         zone: internal
         state: enabled
         permanent: true
@@ -81,7 +84,7 @@
     - name: If firewalld enabled, open etcd ports
       when: groups[server_group] | length > 1
       ansible.posix.firewalld:
-        port: "2379-2381/tcp"
+        port: 2379-2381/tcp
         zone: internal
         state: enabled
         permanent: true
@@ -89,21 +92,21 @@
 
     - name: If firewalld enabled, open inter-node ports
       ansible.posix.firewalld:
-        port: "{{ item }}"
+        port: '{{ item }}'
         zone: internal
         state: enabled
         permanent: true
         immediate: true
       with_items:
-        - 5001/tcp   # Spegel (Embedded distributed registry)
-        - 8472/udp   # Flannel VXLAN
+        - 5001/tcp  # Spegel (Embedded distributed registry)
+        - 8472/udp  # Flannel VXLAN
         - 10250/tcp  # Kubelet metrics
         - 51820/udp  # Flannel Wireguard (IPv4)
         - 51821/udp  # Flannel Wireguard (IPv6)
 
     - name: If firewalld enabled, allow node CIDRs
       ansible.posix.firewalld:
-        source: "{{ item }}"
+        source: '{{ item }}'
         zone: internal
         state: enabled
         permanent: true
@@ -120,7 +123,7 @@
 
     - name: If firewalld enabled, allow default CIDRs
       ansible.posix.firewalld:
-        source: "{{ item }}"
+        source: '{{ item }}'
         zone: trusted
         state: enabled
         permanent: true
@@ -129,9 +132,9 @@
 
 - name: Add br_netfilter to /etc/modules-load.d/
   ansible.builtin.copy:
-    content: "br_netfilter"
+    content: br_netfilter
     dest: /etc/modules-load.d/br_netfilter.conf
-    mode: "u=rw,g=,o="
+    mode: u=rw,g=,o=
   when: (ansible_os_family == 'RedHat' or ansible_distribution == 'Archlinux')
 
 - name: Load br_netfilter
@@ -142,8 +145,8 @@
 
 - name: Set bridge-nf-call-iptables (just to be sure)
   ansible.posix.sysctl:
-    name: "{{ item }}"
-    value: "1"
+    name: '{{ item }}'
+    value: '1'
     state: present
     reload: true
   when: (ansible_os_family == 'RedHat' or ansible_distribution == 'Archlinux')
@@ -186,6 +189,7 @@
     manager: auto
 
 # Iptables v1.8.0-1.8.4 have a specific bug with K3s. https://github.com/k3s-io/k3s/issues/3117
+
 - name: If iptables v1.8.0-1.8.4, warn user  # noqa ignore-errors
   when:
     - ansible_facts.packages['iptables'] is defined
@@ -194,17 +198,17 @@
   ansible.builtin.fail:
     msg:
       - "Warning: Iptables {{ ansible_facts.packages['iptables'][0]['version'] }} found."
-      - "Add '--prefer-bundled-bin' to extra_server_args variable to use the bundled iptables binary."
+      - Add '--prefer-bundled-bin' to extra_server_args variable to use the bundled iptables binary.
   ignore_errors: true
 
 - name: Add /usr/local/bin to sudo secure_path
   ansible.builtin.lineinfile:
-    line: 'Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin'
-    regexp: "Defaults(\\s)*secure_path(\\s)*="
+    line: Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+    regexp: Defaults(\s)*secure_path(\s)*=
     state: present
     insertafter: EOF
     path: /etc/sudoers
-    validate: 'visudo -cf %s'
+    validate: visudo -cf %s
   when: ansible_os_family == 'RedHat'
 
 - name: Setup alternative K3s directory
@@ -212,43 +216,49 @@
     - k3s_server_location is defined
     - k3s_server_location != "/var/lib/rancher/k3s"
   block:
+
     - name: Make rancher directory
       ansible.builtin.file:
-        path: "/var/lib/rancher"
-        mode: "0755"
+        path: /var/lib/rancher
+        mode: '0755'
         state: directory
+
     - name: Create symlink
       ansible.builtin.file:
         dest: /var/lib/rancher/k3s
-        src: "{{ k3s_server_location }}"
+        src: '{{ k3s_server_location }}'
         force: true
         state: link
 
 - name: Setup extra manifests
   when: extra_manifests is defined
   block:
+
     - name: Make manifests directory
       ansible.builtin.file:
-        path: "/var/lib/rancher/k3s/server/manifests"
-        mode: "0700"
+        path: /var/lib/rancher/k3s/server/manifests
+        mode: '0700'
         state: directory
+
     - name: Copy manifests
       ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: "/var/lib/rancher/k3s/server/manifests"
-        mode: "0600"
-      loop: "{{ extra_manifests }}"
+        src: '{{ item }}'
+        dest: /var/lib/rancher/k3s/server/manifests
+        mode: '0600'
+      loop: '{{ extra_manifests }}'
 
 - name: Setup optional private registry configuration
   when: registries_config_yaml is defined
   block:
+
     - name: Make k3s config directory
       ansible.builtin.file:
-        path: "/etc/rancher/k3s"
-        mode: "0755"
+        path: /etc/rancher/k3s
+        mode: '0755'
         state: directory
+
     - name: Copy config values
       ansible.builtin.copy:
-        content: "{{ registries_config_yaml }}"
-        dest: "/etc/rancher/k3s/registries.yaml"
-        mode: "0644"
+        content: '{{ registries_config_yaml }}'
+        dest: /etc/rancher/k3s/registries.yaml
+        mode: '0644'

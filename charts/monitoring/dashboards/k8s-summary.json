@@ -46,10 +46,9 @@
   },
   "description": "Summary metrics about containers running on Kubernetes nodes and mainline kubernetes statistics",
   "editable": true,
-  "gnetId": 8685,
+  "gnetId": null,
   "graphTooltip": 1,
-  "id": null,
-  "iteration": 1540824937801,
+  "id": 2,
   "links": [
     {
       "asDropdown": true,
@@ -2674,6 +2673,6 @@
   },
   "timezone": "browser",
   "title": "K8s Cluster Summary",
-  "uid": "taQlRuxik",
-  "version": 7
+  "uid": "k8s-summary",
+  "version": 1
 }

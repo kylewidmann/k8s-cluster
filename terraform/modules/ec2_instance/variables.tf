@@ -40,3 +40,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "volume_size" {
+  description = "The volume size for the EC2 instance root volume"
+  type = number
+  default = 8
+}

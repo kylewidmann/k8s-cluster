@@ -1,13 +1,12 @@
+---
 name: Check Version Update
-
 on:
   pull_request:
     paths:
-      - 'src/**'
+      - src/**
     branches:
       - main
       - master
-
 jobs:
   check-version-update:
     runs-on: ubuntu-latest
@@ -20,8 +19,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
-      
+          python-version: 3.x
+
       - name: Check if src files changed
         id: src-changes
         run: |
@@ -52,6 +51,6 @@ jobs:
 
       - name: Fail if version was not updated
         if: steps.src-changes.outputs.changed == 'true' && steps.version-check.outputs.updated == 'false'
-        run: |
+        run: |-
           echo "::error::Changes detected in src/ directory but version in pyproject.toml was not updated"
           exit 1

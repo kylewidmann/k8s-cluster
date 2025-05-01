@@ -18,3 +18,4 @@ k3s_server_config_yaml: |-
   node-external-ip: {{ wireguard_ip }}
   advertise-address: {{ wireguard_ip }}
   flannel-iface: wg0
+  flannel-external-ip: true

@@ -17,7 +17,7 @@
       ansible.builtin.command: microk8s stop
       register: stop_result
       failed_when: stop_result.rc != 0 and "not running" not in stop_result.stderr
-      changed_when: stop_result = 0
+      changed_when: stop_result == 0
 
     - name: Check if csr.conf.template exists
       ansible.builtin.stat:
@@ -47,13 +47,13 @@
       ansible.builtin.command: microk8s refresh-certs --cert server.crt
       when: csr_conf_template.stat.exists and template_updated.changed
       register: refresh_result
-      changed_when: refresh_result = 0
+      changed_when: refresh_result == 0
 
     - name: Start MicroK8s service
       ansible.builtin.command: microk8s start
       register: start_result
       failed_when: start_result.rc != 0
-      changed_when: start_result.rc = 0
+      changed_when: start_result.rc == 0
 
     - name: Wait for MicroK8s to be ready
       ansible.builtin.command: microk8s status --wait-ready
@@ -76,3 +76,67 @@
     - name: Report certificate status
       ansible.builtin.debug:
         msg: Certificate {{ 'includes' if verify_result.rc == 0 else 'does NOT include' }} the additional IP {{ additional_ip }}
+
+
+- name: Setup kubectl on control node
+  hosts: control_plane
+  tasks:
+    - name: Check whether kubectl is installed on control node
+      delegate_to: 127.0.0.1
+      become: false
+      ansible.builtin.command: kubectl
+      register: kubectl_installed
+      ignore_errors: true
+      changed_when: false
+
+    - name: Verify kubeconfig dir exists
+      when: kubectl_installed.rc == 0
+      delegate_to: 127.0.0.1
+      become: false
+      ansible.builtin.file:
+        path: '{{ kubeconfig_dir }}'
+        state: directory
+        mode: '0750'
+
+    - name: Apply K3S kubeconfig to control node
+      when: kubectl_installed.rc == 0
+      vars:
+        cluster_context: '{{ inventory_hostname }}'
+        kubeconfig: '{{ kubeconfig_dir }}/microk8s-{{ inventory_hostname }}'
+      block:
+
+        - name: Copy kubeconfig to control node
+          ansible.builtin.fetch:
+            src: /home/{{ ansible_user }}/.kube/config
+            dest: '{{ kubeconfig }}'
+            flat: true
+
+        - name: Change server address in kubeconfig on control node
+          ansible.builtin.shell: |
+            KUBECONFIG={{ kubeconfig }} kubectl config set-cluster microk8s-cluster --server=https://{{ ansible_host }}:{{ api_port | default('16443') }}
+          delegate_to: 127.0.0.1
+          become: false
+          register: csa_result
+          changed_when:
+            - csa_result.rc == 0
+
+        - name: Change context name in kubeconfig on control node
+          ansible.builtin.replace:
+            path: '{{ kubeconfig }}'
+            regexp: ': microk8s'
+            replace: ': microk8s-{{ cluster_context }}'
+          delegate_to: 127.0.0.1
+          become: false
+
+        - name: Merge with any existing kubeconfig on control node
+          ansible.builtin.shell: |
+            TFILE=$(mktemp)
+            mkdir -p ~/.kube
+            touch ~/.kube/config
+            KUBECONFIG={{ kubeconfig }}:~/.kube/config kubectl config view --flatten > ${TFILE}
+            mv ${TFILE} ~/.kube/config
+          delegate_to: 127.0.0.1
+          become: false
+          register: mv_result
+          changed_when:
+            - mv_result.rc == 0

@@ -14,9 +14,8 @@
       changed_when: false
 
     - name: Get public/external IP address
-      ansible.builtin.uri:
-        url: https://ifconfig.me
-        return_content: true
+      ansible.builtin.shell: # noqa: command-instead-of-module command-instead-of-shell
+        curl -s https://ifconfig.me
       register: public_ip
       changed_when: false
       ignore_errors: true
@@ -24,7 +23,7 @@
     - name: Set detected public IP
       ansible.builtin.set_fact:
         detected_public_ip: '{{ public_ip.stdout }}'
-      when: public_ip.rc == 0
+      when: public_ip.rc == 0  # Change this line
 
     - name: Verify detected IP matches inventory IP
       ansible.builtin.debug:
@@ -152,6 +151,15 @@
       ansible.builtin.command: ip link set mtu {{ wireguard_mtu | default(1380) }} dev wg0
       become: true
       changed_when: false
+
+    - name: Set DNS for wg0
+      ansible.builtin.shell: |
+        resolvectl dns wg0 8.8.8.8 8.8.4.4
+        resolvectl domain wg0 ~.
+      become: true
+      register: resolvectl_result
+      changed_when: resolvectl_result.rc == 0
+      failed_when: resolvectl_result.rc != 0
 
     - name: Restart WG
       ansible.builtin.shell: wg-quick down wg0 && wg-quick up wg0

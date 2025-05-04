@@ -7,10 +7,9 @@
     mode: '0644'
   changed_when: false
 
-- name: Get public/external IP address
-  ansible.builtin.uri:
-    url: https://ifconfig.me
-    return_content: true
+- name: Get public/external IP address # noqa command-instead-of-module
+  ansible.builtin.shell: |
+    curl -s https://ifconfig.me
   register: public_ip
   changed_when: false
   ignore_errors: true
@@ -180,8 +179,15 @@
 - name: Set hostnames
   ansible.builtin.set_fact:
     hostname: >-
-      {% if 'server' in group_names %}server{% elif 'agent' in group_names %}agent{% endif %}\
-        {{  (groups['server'] if 'server' in group_names else groups['agent']).index(inventory_hostname) + 1 }}
+      {{
+         (
+           'server' if 'server' in group_names else 'agent' if 'agent' in group_names else ''
+         )
+         ~
+         (
+           (groups['server'] if 'server' in group_names else groups['agent']).index(inventory_hostname) + 1
+         )
+      }}
 
 - name: Debug hostnames
   ansible.builtin.debug:

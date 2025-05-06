@@ -1,6 +1,5 @@
 ---
-
-- name: Cluster prep
+- name: Common Setup
   hosts: all
   become: true
   roles:
@@ -12,7 +11,7 @@
   roles:
     - role: k3s
 
-- name: Setup Karmada Control Plane and Clusters
+- name: Setup Karmada Control Plane and Member Clusters
   hosts: all
   become: true
   roles:

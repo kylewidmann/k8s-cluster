@@ -1,0 +1,77 @@
+---
+# - name: Set hostnames
+#   ansible.builtin.template:
+#     src: "templates/hostnames.yml.j2"
+#     dest: '{{ playbook_dir }}/../group_vars/all/hostnames.yml'
+#     mode: '0644'
+#   delegate_to: 127.0.0.1
+#   become: false
+#   run_once: true
+
+# - name: Include hostnames variables
+#   ansible.builtin.include_vars:
+#     file: '{{ playbook_dir }}/../group_vars/all/hostnames.yml'
+
+# - name: Set hostname for each host
+#   ansible.builtin.set_fact:
+#     hostname: '{{ item.hostname }}'
+#   loop: '{{ host_mappings }}'
+#   when: item.ip == inventory_hostname
+
+# - name: Debug hostname for each host
+#   ansible.builtin.debug:
+#     msg: '{{ hostname }}'
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
+
+- name: Update /etc/hostname
+  ansible.builtin.copy:
+    content: "{{ inventory_hostname }}"
+    dest: /etc/hostname
+    mode: "0644"
+
+- name: Ensure preserve_hostname is set to true
+  ansible.builtin.lineinfile:
+    path: /etc/cloud/cloud.cfg
+    regexp: "^preserve_hostname:"
+    line: "preserve_hostname: true"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create hostname script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/set-hostname.sh
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      hostnamectl set-hostname "{{ inventory_hostname }}"
+      hostname "{{ inventory_hostname }}"
+      echo -n "{{ inventory_hostname }}" > /etc/hostname
+
+- name: Create systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/set-hostname.service
+    content: |
+      [Unit]
+      Description=Set system hostname on boot
+      After=network.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/set-hostname.sh
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+
+- name: Enable and start hostname service
+  ansible.builtin.systemd:
+    name: set-hostname
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,9 +1,8 @@
 ---
-
 - name: Set hostname for each host
   ansible.builtin.set_fact:
-    hostname: '{{ item.hostname }}'
-  loop: '{{ host_mappings }}'
+    hostname: "{{ item.hostname }}"
+  loop: "{{ host_mappings }}"
   when: item.ip == inventory_hostname
 
 - name: Register member clusters with Karmada
@@ -23,7 +22,7 @@
     - join_result.rc == 0
     - "'cluster is joined successfully' in join_result.stdout"
   vars:
-    cluster_name: '{{ hostname }}'
+    cluster_name: "{{ hostname }}"
 
 - name: Verify that member clusters are registered
   ansible.builtin.command: >

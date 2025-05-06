@@ -1,5 +1,4 @@
 ---
-
 - name: Check if Helm is already installed
   ansible.builtin.command: helm version --short
   register: karmada_helm_version_result
@@ -14,7 +13,6 @@
 - name: Install Helm if not already installed
   when: karmada_helm_version_result.rc != 0
   block:
-
     - name: Set architecture variable
       ansible.builtin.set_fact:
         helm_arch: "{{ 'arm64' if 'arm64' in arch_result.stdout or 'aarch64' in arch_result.stdout else 'amd64' }}"
@@ -23,13 +21,13 @@
       ansible.builtin.get_url:
         url: https://get.helm.sh/helm-{{ karmada_helm_version }}-linux-{{ helm_arch }}.tar.gz
         dest: /tmp/helm.tar.gz
-        mode: '0644'
+        mode: "0644"
 
     - name: Create Helm temp directory
       ansible.builtin.file:
         path: /tmp/helm
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Extract Helm
       ansible.builtin.unarchive:
@@ -41,13 +39,13 @@
       ansible.builtin.copy:
         src: /tmp/helm/linux-{{ helm_arch }}/helm
         dest: /usr/local/bin/helm
-        mode: '0755'
+        mode: "0755"
         remote_src: true
       become: true
 
     - name: Clean up Helm installation files
       ansible.builtin.file:
-        path: '{{ item }}'
+        path: "{{ item }}"
         state: absent
       with_items:
         - /tmp/helm
@@ -55,9 +53,9 @@
 
 - name: Create temp kubeconfig directory
   ansible.builtin.file:
-    path: '{{ karmada_kubeconfig_temp_dir }}'
+    path: "{{ karmada_kubeconfig_temp_dir }}"
     state: directory
-    mode: '0700'
+    mode: "0700"
 
 - name: Check if kubectl-karmada is already installed
   ansible.builtin.command: kubectl-karmada version
@@ -68,7 +66,6 @@
 - name: Install kubectl-karmada
   when: kubectl_karmada_result.rc != 0
   block:
-
     - name: Set architecture variable
       ansible.builtin.set_fact:
         karmada_arch: "{{ 'arm64' if 'arm64' in arch_result.stdout or 'aarch64' in arch_result.stdout else 'amd64' }}"
@@ -77,7 +74,7 @@
       ansible.builtin.get_url:
         url: https://github.com/karmada-io/karmada/releases/download/{{ karmada_kubectl_version }}/kubectl-karmada-linux-{{ karmada_arch }}.tgz
         dest: /tmp/kubectl-karmada.tgz
-        mode: '0644'
+        mode: "0644"
 
     - name: Extract kubectl-karmada
       ansible.builtin.unarchive:
@@ -89,7 +86,7 @@
       ansible.builtin.copy:
         src: /tmp/kubectl-karmada
         dest: /usr/local/bin/kubectl-karmada
-        mode: '0755'
+        mode: "0755"
         remote_src: true
       become: true
 

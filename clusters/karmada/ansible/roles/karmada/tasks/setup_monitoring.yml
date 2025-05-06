@@ -1,8 +1,8 @@
 ---
 - name: Set hostname for each host
   ansible.builtin.set_fact:
-    hostname: '{{ item.hostname }}'
-  loop: '{{ host_mappings }}'
+    hostname: "{{ item.hostname }}"
+  loop: "{{ host_mappings }}"
   when: item.ip == inventory_hostname
 
 - name: Add monitoring Helm repository
@@ -20,7 +20,7 @@
   ansible.builtin.template:
     src: monitoring-apiserver-values.yaml.j2
     dest: /tmp/monitoring-apiserver-values.yaml
-    mode: '0644'
+    mode: "0644"
 
 - name: Install or upgrade Monitoring on Karmada API Server context
   ansible.builtin.command: >
@@ -54,7 +54,7 @@
   ansible.builtin.template:
     src: monitoring-host-values.yaml.j2
     dest: /tmp/monitoring-host-values.yaml
-    mode: '0644'
+    mode: "0644"
 
 - name: Install or upgrade Monitoring on Karmada host
   ansible.builtin.command: >

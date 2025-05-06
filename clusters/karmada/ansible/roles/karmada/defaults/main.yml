@@ -11,7 +11,7 @@ karmada_namespace: karmada-system
 karmada_helm_version: v3.11.3
 
 # kubectl-karmada version
-karmada_kubectl_version: '{{ karmada_version }}'
+karmada_kubectl_version: "{{ karmada_version }}"
 
 # Karmada configurations
 karmada_install_mode: host
@@ -28,4 +28,4 @@ karmada_apiserver_bind_address: 0.0.0.0
 karmada_monitoring_chart_repo: https://kylewidmann.github.io/k8s-cluster/
 karmada_monitoring_chart_version: 0.2.0
 karmada_monitoring_namespace: monitoring
-karmada_grafana_password: chutethis  # Should be overridden in group_vars with vault
+karmada_grafana_password: chutethis # Should be overridden in group_vars with vault

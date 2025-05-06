@@ -1,10 +1,8 @@
 ---
-
 - name: Undo cluster setup
   hosts: all
   become: true
   tasks:
-
     - name: Run K3s Uninstall script [server]
       ansible.builtin.command:
         cmd: k3s-uninstall.sh
@@ -24,7 +22,7 @@
       when: k3s_server_location is defined
       ansible.builtin.shell:
         cmd: rm -rf {{ k3s_server_location }}/*
-        removes: '{{ k3s_server_location }}/*'
+        removes: "{{ k3s_server_location }}/*"
 
     - name: Remove K3s config
       when: k3s_server_config_yaml is defined

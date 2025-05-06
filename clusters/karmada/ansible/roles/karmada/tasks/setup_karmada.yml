@@ -1,5 +1,4 @@
 ---
-
 - name: Add Karmada Helm repository
   ansible.builtin.command: helm repo add karmada {{ karmada_chart_repo }}
   register: helm_repo_result
@@ -32,7 +31,7 @@
   ansible.builtin.template:
     src: karmada-values.yaml.j2
     dest: /tmp/karmada-values.yaml
-    mode: '0644'
+    mode: "0644"
 
 - name: Get current Karmada values
   ansible.builtin.command: >
@@ -48,7 +47,7 @@
   ansible.builtin.copy:
     content: "{{ current_values.stdout | default('') }}"
     dest: /tmp/karmada-current-values.yaml
-    mode: '0644'
+    mode: "0644"
   when: karmada_status.rc == 0 and current_values is defined and current_values.rc == 0
   changed_when: false
 
@@ -90,13 +89,13 @@
 
 - name: Setup Karmada API kubeconfig
   vars:
-    kubeconfig: '{{ karmada_kubeconfig_temp_dir }}/karmada-apiserver'
+    kubeconfig: "{{ karmada_kubeconfig_temp_dir }}/karmada-apiserver"
   block:
     - name: Save Karmada kubeconfig to file
       ansible.builtin.copy:
-        content: '{{ karmada_kubeconfig.stdout }}'
-        dest: '{{ kubeconfig }}'
-        mode: '0600'
+        content: "{{ karmada_kubeconfig.stdout }}"
+        dest: "{{ kubeconfig }}"
+        mode: "0600"
 
     - name: Change server address in kubeconfig for API server
       ansible.builtin.shell: |
@@ -104,7 +103,6 @@
       register: csa_result
       changed_when:
         - csa_result.rc == 0
-
 
 - name: Check whether kubectl is installed on control node
   delegate_to: 127.0.0.1
@@ -117,13 +115,12 @@
 - name: Apply karmada-apiserver kubeconfig to control node
   when: kubectl_installed.rc == 0 and inventory_hostname == groups['karmada'][0]
   vars:
-    kubeconfig: '{{ kubeconfig_dir }}/karmada-apiserver'
+    kubeconfig: "{{ kubeconfig_dir }}/karmada-apiserver"
   block:
-
     - name: Copy kubeconfig to control node
       ansible.builtin.fetch:
-        src: '{{ karmada_kubeconfig_temp_dir }}/karmada-apiserver'
-        dest: '{{ kubeconfig }}'
+        src: "{{ karmada_kubeconfig_temp_dir }}/karmada-apiserver"
+        dest: "{{ kubeconfig }}"
         flat: true
 
     - name: Change server address in kubeconfig on control node

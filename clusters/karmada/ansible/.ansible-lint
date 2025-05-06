@@ -17,5 +17,5 @@ exclude_paths:
   - terraform/
 
 enable_list:
-  - fqcn-builtins  # Use fully qualified collection names
-  - no-log-password  # Ensure no passwords are logged
+  - fqcn-builtins # Use fully qualified collection names
+  - no-log-password # Ensure no passwords are logged

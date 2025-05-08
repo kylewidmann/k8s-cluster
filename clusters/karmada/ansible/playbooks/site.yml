@@ -13,14 +13,6 @@
       ansible.builtin.set_fact:
         skip_configuration: "{{ config_marker.stat.exists and 'add-nodes' in ansible_run_tags }}"
 
-- name: Debug
-  hosts: all
-  tags: always
-  tasks:
-    - name: Debug config flag
-      ansible.builtin.debug:
-        msg: "{{ skip_configuration }}"
-
 - name: Common Setup
   hosts: all
   become: true

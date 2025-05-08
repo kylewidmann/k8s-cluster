@@ -1,12 +1,6 @@
 ---
-- name: Set hostname for each host
-  ansible.builtin.set_fact:
-    hostname: "{{ item.hostname }}"
-  loop: "{{ host_mappings }}"
-  when: item.ip == inventory_hostname
-
 - name: Register member clusters with Karmada
-  when: inventory_hostname in groups['k3s_clusters']
+  when: inventory_hostname in groups['workers']
   ansible.builtin.command: >
     kubectl karmada  --kubeconfig={{ kubeconfig_dir }}/karmada-apiserver
     join
@@ -22,7 +16,7 @@
     - join_result.rc == 0
     - "'cluster is joined successfully' in join_result.stdout"
   vars:
-    cluster_name: "{{ hostname }}"
+    cluster_name: "{{ inventory_hostname }}"
 
 - name: Verify that member clusters are registered
   ansible.builtin.command: >

@@ -1,30 +1,7 @@
 ---
-# - name: Set hostnames
-#   ansible.builtin.template:
-#     src: "templates/hostnames.yml.j2"
-#     dest: '{{ playbook_dir }}/../group_vars/all/hostnames.yml'
-#     mode: '0644'
-#   delegate_to: 127.0.0.1
-#   become: false
-#   run_once: true
-
-# - name: Include hostnames variables
-#   ansible.builtin.include_vars:
-#     file: '{{ playbook_dir }}/../group_vars/all/hostnames.yml'
-
-# - name: Set hostname for each host
-#   ansible.builtin.set_fact:
-#     hostname: '{{ item.hostname }}'
-#   loop: '{{ host_mappings }}'
-#   when: item.ip == inventory_hostname
-
-# - name: Debug hostname for each host
-#   ansible.builtin.debug:
-#     msg: '{{ hostname }}'
-
 - name: Set hostname
   ansible.builtin.hostname:
-    name: "{{ hostname }}"
+    name: "{{ inventory_hostname }}"
 
 - name: Update /etc/hostname
   ansible.builtin.copy:

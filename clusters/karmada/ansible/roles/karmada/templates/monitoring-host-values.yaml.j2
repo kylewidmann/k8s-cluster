@@ -57,7 +57,7 @@ prometheus:
     - '{job="kubernetes-nodes-cadvisor"}'
     - '{job="node-exporter"}'
     clusters:
-{% for host in groups['k3s_clusters'] %}
-    - endpoint: {{ host }}:30090
-      name: {{ hostvars[host]['ansible_facts']['hostname'] }}
+{% for host in groups['workers'] %}
+    - endpoint: {{ hostvars[host]['ansible_host'] }}:30090
+      name: {{ host }}
 {% endfor %}

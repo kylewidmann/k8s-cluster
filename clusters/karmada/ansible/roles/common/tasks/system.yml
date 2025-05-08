@@ -119,13 +119,14 @@
 - name: Check Lambda packages
   block:
     - name: Get list of installed lambda packages
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-          dpkg --list | grep lambda | awk '{print $2}'
-        executable: /bin/bash
-      register: lambda_packages
-      changed_when: false
+      ansible.builtin.package_facts:
+        manager: apt
+      when: ansible_facts.packages is not defined
+
+    - name: Set fact for lambda packages
+      ansible.builtin.set_fact:
+        lambda_packages_list: >-
+          {{ ansible_facts.packages | dict2items | selectattr('key', 'match', 'lambda') | map(attribute='key') | list }}
 
     - name: Check if lambda version file exists
       ansible.builtin.stat:
@@ -139,12 +140,12 @@
 
     - name: Remove lambda packages
       ansible.builtin.apt:
-        name: "{{ lambda_packages.stdout_lines }}"
+        name: "{{ lambda_packages_list }}"
         state: absent
         purge: true
       when:
         - lambda_version_file.stat.exists or lambda_file_backup.stat.exists
-        - lambda_packages.stdout_lines | length > 0
+        - lambda_packages_list | length > 0
 
 - name: Disable swap
   block:

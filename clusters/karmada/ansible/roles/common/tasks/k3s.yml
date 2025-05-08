@@ -36,7 +36,7 @@
       loop: "{{ extra_manifests }}"
 
 # Setup optional private registry configuration
-- name: Setup optional private registry configuration
+- name: Setup private registry configuration
   when: registries_config_yaml is defined
   block:
     - name: Make k3s config directory
@@ -56,6 +56,11 @@
         mode: "0644"
       notify: restart k3s
 
+- name: Check if containerd config file exists
+  ansible.builtin.stat:
+    path: /etc/containerd/config.toml
+  register: containerd_config_file
+
 - name: Ensure containerd disabled_plugins is properly configured
   ansible.builtin.lineinfile:
     path: /etc/containerd/config.toml
@@ -64,3 +69,4 @@
     backrefs: true
   register: containerd_config
   notify: Restart containerd
+  when: containerd_config_file.stat.exists

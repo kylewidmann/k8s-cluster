@@ -34,15 +34,29 @@
     - name: Allow for Karmada control plane (only for Karmada host)
       when:
         - ufw_status['stdout'] == "Status':' active"
-        - inventory_hostname in groups['karmada'] | default([])
+        - inventory_hostname in groups['control'] | default([])
       community.general.ufw:
         rule: allow
         port: "{{ item.port }}"
         proto: "{{ item.proto }}"
         comment: "{{ item.comment }}"
       loop:
-        - { port: "{{ karmada_api_port }}", proto: tcp, comment: Karmada API Server }
+        - { port: "{{ karmada_api_port | default('32443') }}", proto: tcp, comment: Karmada API Server }
         - { port: "2379", proto: tcp, comment: etcd client }
+        - { port: "30080", proto: tcp, comment: Grafana UI }
+
+    - name: Allow Prometheus and Node Exporter on all hosts
+      when:
+        - ufw_status['stdout'] == "Status':' active"
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+        comment: "{{ item.comment }}"
+      loop:
+        - { port: "30090", proto: tcp, comment: Prometheus UI }
+        - { port: "9100", proto: tcp, comment: Node Exporter metrics }
+        - { port: "10250", proto: tcp, comment: Metrics server }
 
     - name: If ufw enabled, allow pod and service networks
       when:

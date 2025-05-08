@@ -113,7 +113,7 @@
   changed_when: false
 
 - name: Apply karmada-apiserver kubeconfig to control node
-  when: kubectl_installed.rc == 0 and inventory_hostname == groups['karmada'][0]
+  when: kubectl_installed.rc == 0 and inventory_hostname == groups['control'][0]
   vars:
     kubeconfig: "{{ kubeconfig_dir }}/karmada-apiserver"
   block:
@@ -125,7 +125,7 @@
 
     - name: Change server address in kubeconfig on control node
       ansible.builtin.shell: |
-        KUBECONFIG={{ kubeconfig }} kubectl config set-cluster karmada-apiserver --server=https://{{ inventory_hostname }}:{{ karmada_api_server_node_port }}
+        KUBECONFIG={{ kubeconfig }} kubectl config set-cluster karmada-apiserver --server=https://{{ ansible_host }}:{{ karmada_api_server_node_port }}
       delegate_to: 127.0.0.1
       become: false
       register: csa_result

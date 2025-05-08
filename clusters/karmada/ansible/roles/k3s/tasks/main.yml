@@ -1,10 +1,4 @@
 ---
-- name: Set hostname for each host
-  ansible.builtin.set_fact:
-    hostname: "{{ item.hostname }}"
-  loop: "{{ host_mappings }}"
-  when: item.ip == inventory_hostname
-
 - name: Get k3s installed version
   ansible.builtin.command: k3s --version
   register: k3s_version_output
@@ -187,8 +181,8 @@
 - name: Apply K3S kubeconfig to control node
   when: kubectl_installed.rc == 0
   vars:
-    cluster_context: "{{ hostname }}"
-    kubeconfig: "{{ kubeconfig_dir }}/{{ hostname }}"
+    cluster_context: "{{ inventory_hostname }}"
+    kubeconfig: "{{ kubeconfig_dir }}/{{ inventory_hostname }}"
   block:
     - name: Copy kubeconfig to control node
       ansible.builtin.fetch:
@@ -198,7 +192,7 @@
 
     - name: Change server address in kubeconfig on control node
       ansible.builtin.shell: |
-        KUBECONFIG={{ kubeconfig }} kubectl config set-cluster default --server=https://{{ inventory_hostname }}:{{ api_port | default('6443') }}
+        KUBECONFIG={{ kubeconfig }} kubectl config set-cluster default --server=https://{{ ansible_host }}:{{ api_port | default('6443') }}
       delegate_to: 127.0.0.1
       become: false
       register: csa_result

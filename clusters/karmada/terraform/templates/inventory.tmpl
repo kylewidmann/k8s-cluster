@@ -1,16 +1,18 @@
 all:
   children:
-    karmada:
+    control:
       hosts:
         %{~ for name, instance in instances ~}
-        %{~ if can(regex("^control", name)) ~}
-        ${instance.public_ip}:
+        %{~ if can(regex("^chutes-miner-control", name)) ~}
+        ${name}:
+          ansible_host: ${instance.public_ip}
         %{~ endif ~}
         %{~ endfor ~}
-    k3s_clusters:
+    workers:
       hosts:
         %{~ for name, instance in instances ~}
-        %{~ if can(regex("^cluster", name)) ~}
-        ${instance.public_ip}:
+        %{~ if can(regex("^chutes-miner-gpu", name)) ~}
+        ${name}:
+          ansible_host: ${instance.public_ip}
         %{~ endif ~}
         %{~ endfor ~}

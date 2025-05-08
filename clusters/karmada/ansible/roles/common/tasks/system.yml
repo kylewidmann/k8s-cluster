@@ -179,8 +179,14 @@
         regexp: "^#?NTP="
         line: "NTP=pool.ntp.org"
 
-    - name: Force time synchronization
-      ansible.builtin.shell: |
-        timedatectl set-ntp true
-        systemctl restart systemd-timesyncd
+    - name: Enable NTP time synchronization
+      ansible.builtin.command: timedatectl set-ntp true
       changed_when: false
+      notify: Restart timesyncd service
+
+    - name: Make sure timesyncd service is enabled
+      ansible.builtin.systemd:
+        name: systemd-timesyncd
+        enabled: true
+        state: started
+      notify: Restart timesyncd service
